@@ -69,7 +69,7 @@ CARDS = [
      "Rutte in Warsaw after " + FIG["poland_missiles_down"] + " missiles and "
      "a drone fell on Poland; council meets Monday.", "Reuters", "C"),
     ("COPENHAGEN", "EUR", "Politics",
-     "Denmark expels Russia's defence attache",
+     "Denmark expels Russian attache",
      "A foiled assassination plot is blamed on Russian intelligence; "
      "EU curbs proposed.", "Reuters", "C"),
     ("GULF OF FINLAND", "EUR", "Conflict",
@@ -587,15 +587,17 @@ def main():
         yy0 = cy + (i // 3) * (chh + 6)
         d.rectangle([x, yy0, x + chw, yy0 + chh], fill=(255, 253, 246),
                     outline=(150, 142, 126), width=1)
-        badge(d, x + 6, yy0 + 5, i + 4, region)
-        flag(d, CARD_FLAGS[i], x + 36, yy0 + 6, w=28, h=18)
-        d.text((x + 70, yy0 + 5), place, font=SANS_B(11), fill=REGIONS[region][1])
-        check_h(f"card{i+4} place", place, SANS_B(11), x + 70, x + chw - 38)
-        cmeta = f"{field.upper()} - {src} - {SURE_LABEL[sure]}"
-        d.text((x + 70, yy0 + 17), cmeta, font=SANS(9), fill=MUTE)
-        check_h(f"card{i+4} meta", cmeta, SANS(9), x + 70, x + chw - 38)
-        icon(d, field, x + chw - 32, yy0 + 5, REGIONS[region][1])
-        text_block(d, x + 6, yy0 + 29, head, SERIF(19), INK, chw - 12, 21,
+        CARD_SCENES[i](d, x + 1, yy0 + 1, 110, chh - 2)
+        tx = x + 117
+        badge(d, tx, yy0 + 5, i + 4, region)
+        flag(d, CARD_FLAGS[i], x + chw - 34, yy0 + 5, w=28, h=18)
+        d.text((tx + 30, yy0 + 5), place, font=SANS_B(11),
+               fill=REGIONS[region][1])
+        check_h(f"card{i+4} place", place, SANS_B(11), tx + 30, x + chw - 40)
+        cmeta = f"{src} - {SURE_LABEL[sure]}"
+        d.text((tx + 30, yy0 + 18), cmeta, font=SANS(9), fill=MUTE)
+        check_h(f"card{i+4} meta", cmeta, SANS(9), tx + 30, x + chw - 6)
+        text_block(d, tx, yy0 + 32, head, SERIF(19), INK, chw - 123, 18,
                    max_lines=2, tag=f"card{i}")
     by = cy + 4 * (chh + 6) - 6 + 6
 
@@ -704,6 +706,265 @@ def main():
     img.save(out, optimize=True)
     print("wrote", out, out.stat().st_size, "bytes; stories:", total,
           "; regions:", reg_counts, "; fields:", field_counts)
+
+
+
+# ------------------------------------------------------- card scenes (v3.2)
+# Every card carries a storytelling mini-scene: >= 4 objects that tell
+# the story, plus a place label inside the scene (13px floor). Scenes
+# are 100 x 70, drawn at the card's left; text moves to the right.
+def card_label(d, x, y, w, h, text):
+    tw = d.textlength(text, font=SANS_B(13))
+    d.rectangle([x + 3, y + h - 21, x + 3 + tw + 10, y + h - 3],
+                fill=(10, 14, 30))
+    d.text((x + 8, y + h - 18), text, font=SANS_B(13), fill=(255, 255, 255))
+    H_CHECKS.append((f"card scene label '{text}'",
+                     round((x + 3 + tw + 10) - (x + w - 1), 1)))
+    if x + 3 + tw + 10 > x + w - 1:
+        OVERFLOWS.append(f"H-OVERFLOW card scene label: {text}")
+
+
+def _sky(d, x, y, w, h, top, bot):
+    for yy in range(h):
+        t = yy / max(1, h - 1)
+        c = tuple(int(top[i] + (bot[i] - top[i]) * t) for i in range(3))
+        d.line([x, y + yy, x + w, y + yy], fill=c)
+
+
+def sc_warsaw(d, x, y, w, h):
+    _sky(d, x, y, w, h, (18, 26, 54), (70, 62, 92))
+    for bx, bw, bh in ((6, 16, 26), (26, 12, 34), (62, 14, 30), (80, 16, 22)):
+        d.rectangle([x + bx, y + h - bh, x + bx + bw, y + h], fill=(22, 26, 46))
+    d.arc([x + 8, y + 6, x + w - 8, y + 62], start=180, end=360,
+          fill=(120, 220, 255), width=3)
+    for tx, ty in ((18, 10), (66, 6)):
+        d.line([x + tx + 22, y + ty - 4, x + tx, y + ty + 12],
+               fill=(255, 120, 90), width=2)
+        d.ellipse([x + tx - 3, y + ty + 10, x + tx + 3, y + ty + 16],
+                  fill=(255, 214, 90))
+    d.ellipse([x + 84, y + 12, x + 90, y + 17], fill=(250, 205, 90))
+    card_label(d, x, y, w, h, "WARSAW")
+
+
+def sc_copenhagen(d, x, y, w, h):
+    _sky(d, x, y, w, h, (168, 198, 224), (226, 232, 238))
+    d.rectangle([x + 30, y + 18, x + 74, y + 52], fill=(150, 96, 74))
+    d.rectangle([x + 46, y + 4, x + 58, y + 18], fill=(120, 74, 56))
+    d.polygon([(x + 44, y + 4), (x + 60, y + 4), (x + 52, y - 2)], fill=INK)
+    d.rectangle([x, y + 52, x + w, y + h], fill=(58, 96, 140))
+    for wx in (8, 34, 62, 84):
+        d.arc([x + wx, y + 58, x + wx + 12, y + 66], 0, 180,
+              fill=(200, 220, 240), width=2)
+    d.ellipse([x + 12, y + 30, x + 19, y + 37], fill=(40, 40, 50))
+    d.rectangle([x + 11, y + 37, x + 20, y + 48], fill=(40, 40, 50))
+    d.rectangle([x + 20, y + 42, x + 28, y + 48], fill=(120, 74, 56))
+    d.polygon([(x + 78, y + 10), (x + 92, y + 14), (x + 78, y + 18)],
+              fill=(90, 90, 100))
+    d.line([x + 82, y + 14, x + 96, y + 14], fill=(90, 90, 100), width=2)
+    card_label(d, x, y, w, h, "COPENHAGEN")
+
+
+def sc_finland(d, x, y, w, h):
+    _sky(d, x, y, w, h, (120, 150, 180), (190, 205, 215))
+    d.rectangle([x, y + 44, x + w, y + h], fill=(46, 84, 120))
+    d.polygon([(x + 14, y + 44), (x + 20, y + 30), (x + 78, y + 30),
+               (x + 86, y + 44)], fill=(70, 74, 84))
+    for cx in (26, 40, 54):
+        d.rectangle([x + cx, y + 20, x + cx + 11, y + 30], fill=RED)
+    d.rectangle([x + 66, y + 16, x + 76, y + 30], fill=(230, 230, 230))
+    for fx, fy in ((34, 12), (46, 8)):
+        d.polygon([(x + fx, y + fy), (x + fx + 7, y + fy + 10),
+                   (x + fx, y + fy + 16), (x + fx - 5, y + fy + 9)],
+                  fill=(255, 140, 40))
+    d.ellipse([x + 40, y + 2, x + 58, y + 12], fill=(110, 110, 120))
+    d.line([x + 49, y + 12, x + 44, y + 20], fill=(110, 110, 120), width=2)
+    for wx in (6, 30, 58, 82):
+        d.arc([x + wx, y + 52, x + wx + 12, y + 60], 0, 180,
+              fill=(200, 220, 240), width=2)
+    card_label(d, x, y, w, h, "THE GULF")
+
+
+def sc_gaza(d, x, y, w, h):
+    _sky(d, x, y, w, h, (214, 190, 150), (232, 214, 180))
+    d.rectangle([x + 4, y + 16, x + 24, y + 46], fill=(168, 152, 128))
+    d.rectangle([x + 78, y + 10, x + 96, y + 46], fill=(158, 142, 118))
+    d.rectangle([x + 34, y + 30, x + 72, y + 48], fill=(240, 238, 230))
+    d.rectangle([x + 40, y + 36, x + 48, y + 44], fill=RED)
+    d.rectangle([x + 42, y + 34, x + 46, y + 46], fill=RED)
+    d.ellipse([x + 40, y + 48, x + 48, y + 56], fill=INK)
+    d.ellipse([x + 60, y + 48, x + 68, y + 56], fill=INK)
+    for cx in (76, 84):
+        d.rectangle([x + cx, y + 40, x + cx + 7, y + 48], fill=(150, 116, 62))
+    cx, cy = x + 88, y + 8
+    for dx, dy in ((-9, -5), (0, -9), (9, -5), (-9, 4), (9, 4)):
+        d.line([cx, cy, cx + dx, cy + dy], fill=(200, 90, 60), width=2)
+    d.rectangle([x, y + 56, x + w, y + h], fill=(190, 172, 140))
+    card_label(d, x, y, w, h, "GAZA")
+
+
+def sc_basra(d, x, y, w, h):
+    _sky(d, x, y, w, h, (226, 200, 160), (240, 224, 190))
+    d.polygon([(x + 8, y + 52), (x + 16, y + 18), (x + 34, y + 18),
+               (x + 42, y + 52)], fill=(150, 148, 142))
+    d.ellipse([x + 16, y + 14, x + 34, y + 22], fill=(110, 108, 102))
+    for fx in (20, 27):
+        d.polygon([(x + fx, y + 16), (x + fx + 4, y + 4), (x + fx + 7, y + 16)],
+                  fill=(255, 140, 40))
+    d.line([x + 62, y + 52, x + 62, y + 14], fill=INK, width=3)
+    d.line([x + 62, y + 14, x + 88, y + 26], fill=INK, width=2)
+    d.line([x + 62, y + 14, x + 40, y + 28], fill=INK, width=2)
+    d.rectangle([x + 52, y + 44, x + 92, y + 52], fill=(120, 116, 110))
+    for sx, sy in ((56, 36), (70, 30), (82, 38)):
+        d.ellipse([x + sx, y + sy, x + sx + 3, y + sy + 3], fill=(255, 190, 60))
+    d.ellipse([x + 58, y + 2, x + 78, y + 12], fill=(150, 146, 140))
+    card_label(d, x, y, w, h, "BASRA")
+
+
+def sc_khasab(d, x, y, w, h):
+    _sky(d, x, y, w, h, (170, 200, 220), (222, 230, 234))
+    d.polygon([(x, y + 34), (x + 22, y + 12), (x + 40, y + 34)],
+              fill=(140, 118, 92))
+    d.rectangle([x, y + 40, x + w, y + h], fill=(52, 92, 128))
+    d.polygon([(x + 26, y + 44), (x + 34, y + 34), (x + 88, y + 34),
+               (x + 94, y + 44)], fill=(40, 44, 52))
+    d.rectangle([x + 78, y + 26, x + 88, y + 34], fill=(230, 230, 230))
+    d.rectangle([x + 40, y + 29, x + 70, y + 34], fill=(90, 96, 104))
+    d.line([x + 8, y + 6, x + 30, y + 26], fill=(255, 120, 90), width=2)
+    d.line([x + 96, y + 4, x + 80, y + 24], fill=(255, 120, 90), width=2)
+    cx, cy = x + 80, y + 26
+    for dx, dy in ((-8, -4), (0, -8), (8, -4), (8, 4)):
+        d.line([cx, cy, cx + dx, cy + dy], fill=(255, 214, 90), width=2)
+    for wx in (10, 38, 66):
+        d.arc([x + wx, y + 54, x + wx + 12, y + 62], 0, 180,
+              fill=(200, 220, 240), width=2)
+    card_label(d, x, y, w, h, "KHASAB")
+
+
+def sc_geneva(d, x, y, w, h):
+    _sky(d, x, y, w, h, (206, 214, 206), (228, 232, 222))
+    d.rectangle([x + 8, y + 6, x + w - 8, y + 22], fill=(240, 238, 228),
+                outline=INK, width=1)
+    d.text((x + w // 2, y + 14), "AI TALKS", font=SANS_B(13), fill=RED,
+           anchor="mm")
+    d.ellipse([x + 40, y + 26, x + 60, y + 46], fill=(90, 96, 110))
+    d.line([x + 50, y + 26, x + 50, y + 18], fill=INK, width=2)
+    d.ellipse([x + 48, y + 15, x + 52, y + 19], fill=RED)
+    d.ellipse([x + 45, y + 33, x + 49, y + 37], fill=(255, 214, 90))
+    d.ellipse([x + 51, y + 33, x + 55, y + 37], fill=(255, 214, 90))
+    d.rectangle([x + 44, y + 46, x + 56, y + 52], fill=(90, 96, 110))
+    d.rectangle([x + 14, y + 52, x + 86, y + 60], fill=(96, 70, 44))
+    for hx in (20, 32, 62, 74):
+        d.ellipse([x + hx, y + 42, x + hx + 9, y + 51], fill=(222, 184, 150))
+    card_label(d, x, y, w, h, "GENEVA")
+
+
+def sc_washington(d, x, y, w, h):
+    _sky(d, x, y, w, h, (150, 175, 205), (215, 225, 235))
+    d.rectangle([x + 26, y + 34, x + 74, y + 52], fill=(235, 233, 226))
+    d.arc([x + 34, y + 12, x + 66, y + 40], 180, 360, fill=(200, 198, 190),
+          width=5)
+    d.line([x + 50, y + 10, x + 50, y + 4], fill=INK, width=2)
+    for cx in (32, 44, 56, 66):
+        d.rectangle([x + cx, y + 38, x + cx + 3, y + 50], fill=(190, 188, 180))
+    d.rectangle([x + 80, y + 20, x + 96, y + 52], fill=(52, 56, 66))
+    for ly in (26, 34, 42):
+        d.ellipse([x + 84, y + ly, x + 88, y + ly + 4], fill=(120, 255, 140))
+        d.ellipse([x + 90, y + ly, x + 94, y + ly + 4], fill=(255, 120, 90))
+    d.polygon([(x + 14, y + 8), (x + 20, y + 8), (x + 16, y + 18),
+               (x + 22, y + 18), (x + 12, y + 30), (x + 15, y + 19),
+               (x + 10, y + 19)], fill=(250, 205, 90), outline=INK)
+    card_label(d, x, y, w, h, "WASHINGTON")
+
+
+def sc_guasave(d, x, y, w, h):
+    _sky(d, x, y, w, h, (232, 190, 120), (240, 214, 160))
+    d.ellipse([x + 76, y + 4, x + 92, y + 20], fill=(250, 205, 90))
+    d.polygon([(x, y + 40), (x + 34, y + 22), (x + 64, y + 40)],
+              fill=(178, 138, 92))
+    d.polygon([(x + 44, y + 42), (x + 76, y + 26), (x + w, y + 42)],
+              fill=(164, 126, 84))
+    d.rectangle([x + 12, y + 30, x + 16, y + 48], fill=(70, 130, 70))
+    d.rectangle([x + 8, y + 36, x + 12, y + 42], fill=(70, 130, 70))
+    d.rectangle([x + 16, y + 38, x + 20, y + 44], fill=(70, 130, 70))
+    d.rectangle([x + 34, y + 46, x + 62, y + 54], fill=(120, 60, 50))
+    d.rectangle([x + 40, y + 40, x + 56, y + 46], fill=(120, 60, 50))
+    d.ellipse([x + 38, y + 52, x + 46, y + 60], fill=INK)
+    d.ellipse([x + 52, y + 52, x + 60, y + 60], fill=INK)
+    d.ellipse([x + 82, y + 34, x + 89, y + 41], fill=(40, 40, 50))
+    d.polygon([(x + 78, y + 33), (x + 93, y + 33), (x + 90, y + 29),
+               (x + 81, y + 29)], fill=(60, 44, 30))
+    d.rectangle([x, y + 58, x + w, y + h], fill=(206, 170, 116))
+    card_label(d, x, y, w, h, "GUASAVE")
+
+
+def sc_losangeles(d, x, y, w, h):
+    _sky(d, x, y, w, h, (206, 170, 140), (226, 200, 170))
+    d.polygon([(x, y + 52), (x + 40, y + 28), (x + 74, y + 40),
+               (x + w, y + 30), (x + w, y + h), (x, y + h)],
+              fill=(120, 96, 78))
+    for tx, th in ((16, 26), (34, 32), (84, 22)):
+        d.line([x + tx, y + 58, x + tx, y + 58 - th], fill=(40, 34, 30),
+               width=3)
+        d.line([x + tx, y + 58 - th, x + tx - 5, y + 50 - th],
+               fill=(40, 34, 30), width=2)
+        d.line([x + tx, y + 58 - th, x + tx + 6, y + 52 - th],
+               fill=(40, 34, 30), width=2)
+    d.rectangle([x + 52, y + 38, x + 74, y + 56], outline=(52, 44, 38),
+                width=3)
+    d.polygon([(x + 50, y + 38), (x + 63, y + 30), (x + 76, y + 38)],
+              outline=(52, 44, 38), width=3)
+    for sx, sy in ((24, 14), (58, 8), (80, 16)):
+        d.ellipse([x + sx, y + sy, x + sx + 12, y + sy + 6],
+                  fill=(170, 160, 150))
+    d.polygon([(x + 8, y + 62), (x + 13, y + 52), (x + 18, y + 62)],
+              fill=(255, 140, 40))
+    card_label(d, x, y, w, h, "LOS ANGELES")
+
+
+def sc_mercury(d, x, y, w, h):
+    _sky(d, x, y, w, h, (8, 10, 24), (24, 28, 48))
+    for sx, sy in ((10, 8), (30, 16), (88, 6), (70, 20), (16, 30)):
+        d.ellipse([x + sx, y + sy, x + sx + 2, y + sy + 2],
+                  fill=(255, 255, 230))
+    d.ellipse([x + 58, y + 18, x + 94, y + 54], fill=(168, 164, 158))
+    for cx, cy, r in ((68, 28, 4), (80, 40, 5), (74, 48, 3), (86, 26, 3)):
+        d.ellipse([x + cx - r, y + cy - r, x + cx + r, y + cy + r],
+                  outline=(130, 126, 120), width=2)
+    d.rectangle([x + 22, y + 28, x + 36, y + 40], fill=(200, 204, 210))
+    d.polygon([(x + 8, y + 24), (x + 22, y + 30), (x + 22, y + 38),
+               (x + 8, y + 44)], fill=(70, 110, 190))
+    d.polygon([(x + 36, y + 30), (x + 50, y + 24), (x + 50, y + 44),
+               (x + 36, y + 38)], fill=(70, 110, 190))
+    d.polygon([(x + 22, y + 40), (x + 29, y + 50), (x + 36, y + 40)],
+              fill=(255, 160, 60))
+    d.arc([x + 30, y + 2, x + 52, y + 16], 200, 320, fill=(230, 230, 230),
+          width=2)
+    card_label(d, x, y, w, h, "MERCURY")
+
+
+def sc_turin(d, x, y, w, h):
+    _sky(d, x, y, w, h, (120, 170, 110), (90, 150, 84))
+    d.rectangle([x + 6, y + 10, x + w - 6, y + 58], fill=(196, 120, 70))
+    d.rectangle([x + 6, y + 10, x + w - 6, y + 58], outline=(240, 240, 240),
+                width=2)
+    d.line([x + 50, y + 10, x + 50, y + 58], fill=(240, 240, 240), width=2)
+    d.line([x + 6, y + 34, x + w - 6, y + 34], fill=(240, 240, 240), width=3)
+    d.ellipse([x + 30, y + 22, x + 38, y + 30], fill=(210, 230, 80),
+              outline=(240, 240, 240))
+    d.ellipse([x + 64, y + 40, x + 72, y + 48], fill=(210, 230, 80),
+              outline=(240, 240, 240))
+    d.arc([x + 12, y + 44, x + 34, y + 62], 270, 90, fill=(240, 240, 240),
+          width=3)
+    d.line([x + 30, y + 48, x + 40, y + 56], fill=(150, 100, 60), width=3)
+    d.polygon([(x + 80, y + 12), (x + 90, y + 12), (x + 88, y + 22),
+               (x + 82, y + 22)], fill=(250, 205, 90), outline=INK)
+    d.line([x + 85, y + 22, x + 85, y + 27], fill=(250, 205, 90), width=3)
+    card_label(d, x, y, w, h, "TURIN")
+
+
+CARD_SCENES = [sc_warsaw, sc_copenhagen, sc_finland, sc_gaza, sc_basra,
+               sc_khasab, sc_geneva, sc_washington, sc_guasave,
+               sc_losangeles, sc_mercury, sc_turin]
 
 
 if __name__ == "__main__":
