@@ -244,6 +244,9 @@ OVERFLOWS = []
 BANNER_CHECK = []
 H_CHECKS = []
 TEXT_BOXES = []
+OBSTACLES = []
+FLAGS = []
+TAG = [None]
 LINES = []
 LINES = []
 
@@ -257,7 +260,7 @@ class RecDraw:
 
     def text(self, xy, s, font=None, fill=None, **kw):
         if not self.suspend and font is not None:
-            TEXT_BOXES.append((self._r.textbbox(xy, s, font=font), s))
+            TEXT_BOXES.append((self._r.textbbox(xy, s, font=font), s, TAG[0]))
         return self._r.text(xy, s, font=font, fill=fill, **kw)
 
     def __getattr__(self, name):
@@ -274,9 +277,9 @@ def audit_text_boxes():
     n = len(TEXT_BOXES)
     hits, near = [], []
     for i in range(n):
-        (ax0, ay0, ax1, ay1), sa = TEXT_BOXES[i]
+        (ax0, ay0, ax1, ay1), sa, _ta = TEXT_BOXES[i]
         for j in range(i + 1, n):
-            (bx0, by0, bx1, by1), sb = TEXT_BOXES[j]
+            (bx0, by0, bx1, by1), sb, _tb = TEXT_BOXES[j]
             xo = min(ax1, bx1) - max(ax0, bx0)
             yo = min(ay1, by1) - max(ay0, by0)
             if xo > 0 and yo > 0:
@@ -296,7 +299,7 @@ def audit_text_boxes():
     for h in near:
         print("  NEAR:", h)
     pens, mind, minpair = [], 999, None
-    for (bx0, by0, bx1, by1), txt in TEXT_BOXES:
+    for (bx0, by0, bx1, by1), txt, _tg3 in TEXT_BOXES:
         for (lx0, ly0, lx1, ly1), lab in LINES:
             if ly0 == ly1:  # horizontal line
                 if min(bx1, lx1) - max(bx0, lx0) <= 2:
@@ -326,7 +329,7 @@ def audit_text_boxes():
     for h in near:
         print("  NEAR:", h)
     pens, mind, minpair = [], 999, None
-    for (bx0, by0, bx1, by1), txt in TEXT_BOXES:
+    for (bx0, by0, bx1, by1), txt, _tg3 in TEXT_BOXES:
         for (lx0, ly0, lx1, ly1), lab in LINES:
             if ly0 == ly1:  # horizontal line
                 if min(bx1, lx1) - max(bx0, lx0) <= 2:
@@ -403,7 +406,7 @@ def tracked_width(d, text, font, tracking):
 def tracked(d, x, y, text, font, fill, tracking=3):
     bb = d.textbbox((x, y), text, font=font)
     TEXT_BOXES.append(((bb[0], bb[1], bb[2] + tracking * (len(text) - 1),
-                        bb[3]), text))
+                        bb[3]), text, None))
     d.suspend = True
     for ch in text:
         d.text((x, y), ch, font=font, fill=fill)
@@ -586,10 +589,12 @@ def icon(d, field, x, y, col):
 
 
 # ------------------------------------------------------------------ scenes
-def scene_label(d, x, y, w, text):
+def scene_label(d, x, y, w, text, h=66):
     chip_r = x + 8 + d.textlength(text, font=SANS_B(13)) + 12
-    d.rectangle([x + 8, y + 56, chip_r, y + 78], fill=(10, 14, 30))
-    d.text((x + 14, y + 60), text, font=SANS_B(13), fill=(255, 255, 255))
+    d.rectangle([x + 8, y + h - 22, chip_r, y + h - 2], fill=(10, 14, 30))
+    OBSTACLES.append(((x + 8, y + h - 22, chip_r, y + h - 2),
+                      f"scene label chip '{text[:18]}'", TAG[0]))
+    d.text((x + 14, y + h - 19), text, font=SANS_B(13), fill=(255, 255, 255))
     H_CHECKS.append((f"scene label '{text}' right margin",
                      round((chip_r - 6) - (x + 14 + d.textlength(
                          text, font=SANS_B(13))), 1)))
@@ -632,6 +637,7 @@ def scene_antalya(d, x, y, w, h):
         d.line([x, y + yy, x + w, y + yy], fill=c)
     plate = [x + 52, y + 8, x + w - 52, y + 40]
     d.rectangle(plate, fill=(240, 238, 228), outline=INK, width=2)
+    OBSTACLES.append((tuple(plate), "antalya banner plate", TAG[0]))
     d.text((x + w // 2, y + 24), "COP31 — FINAL TEXT?", font=SERIF(15),
            fill=RED, anchor="mm")
     tb = d.textbbox((x + w // 2, y + 24), "COP31 — FINAL TEXT?",
@@ -640,20 +646,22 @@ def scene_antalya(d, x, y, w, h):
                plate[2] - tb[2], plate[3] - tb[3])
     BANNER_CHECK.append((tb, tuple(plate), margins))
     assert min(margins) >= 6, f"banner text escapes plate: margins {margins}"
-    d.ellipse([x + w - 36, y + 44, x + w - 12, y + 68],
+    d.ellipse([x + w - 36, y + 36, x + w - 12, y + 60],
               fill=(255, 255, 255), outline=INK, width=2)
-    d.line([x + w - 24, y + 56, x + w - 24, y + 48], fill=RED, width=3)
-    d.line([x + w - 24, y + 56, x + w - 17, y + 60], fill=RED, width=3)
-    d.rectangle([x + 34, y + 62, x + w - 34, y + 78], fill=(96, 70, 44))
+    OBSTACLES.append(((x + w - 36, y + 36, x + w - 12, y + 60),
+                      "antalya clock", TAG[0]))
+    d.line([x + w - 24, y + 48, x + w - 24, y + 40], fill=RED, width=3)
+    d.line([x + w - 24, y + 48, x + w - 17, y + 52], fill=RED, width=3)
+    d.rectangle([x + 34, y + 54, x + w - 34, y + 63], fill=(96, 70, 44))
     for i in range(5):
         xx = x + 52 + i * 26
-        d.ellipse([xx, y + 42, xx + 15, y + 56], fill=(222, 184, 150))
-        d.rectangle([xx - 2, y + 56, xx + 17, y + 62], fill=TEAL)
+        d.ellipse([xx, y + 34, xx + 15, y + 48], fill=(222, 184, 150))
+        d.rectangle([xx - 2, y + 48, xx + 17, y + 54], fill=TEAL)
     for i in range(5):
         xx = x + w - 66 - i * 26
-        d.ellipse([xx, y + 42, xx + 15, y + 56], fill=(222, 184, 150))
-        d.rectangle([xx - 2, y + 56, xx + 17, y + 62], fill=RED)
-    d.rectangle([x + w // 2 - 9, y + 46, x + w // 2 + 9, y + 78], fill=NAVY)
+        d.ellipse([xx, y + 34, xx + 15, y + 48], fill=(222, 184, 150))
+        d.rectangle([xx - 2, y + 48, xx + 17, y + 54], fill=RED)
+    d.rectangle([x + w // 2 - 9, y + 38, x + w // 2 + 9, y + 63], fill=NAVY)
     scene_label(d, x, y, w, "ANTALYA — TALKS HALL")
 
 
@@ -668,14 +676,16 @@ def scene_peru(d, x, y, w, h):
     d.polygon([(x + 90, y + 54), (x + 180, y + 6), (x + 268, y + 54)], fill=(88, 76, 66))
     d.polygon([(x + 159, y + 22), (x + 180, y + 6), (x + 201, y + 22)], fill=(255, 255, 255))
     d.polygon([(x + 190, y + 58), (x + 262, y + 24), (x + w, y + 58)], fill=(120, 104, 88))
-    for hx, hy in ((36, 56), (88, 62), (228, 58)):
+    for hx, hy in ((36, 42), (88, 48), (228, 44)):
         d.rectangle([x + hx, y + hy, x + hx + 22, y + hy + 13], fill=(240, 234, 220))
         d.polygon([(x + hx - 3, y + hy), (x + hx + 11, y + hy - 8),
                    (x + hx + 25, y + hy)], fill=RED)
-    ex, ey = x + 150, y + 72
+    ex, ey = x + 150, y + 48
     for r in (10, 18, 26):
         d.ellipse([ex - r, ey - r // 2, ex + r, ey + r // 2], outline=RED, width=3)
     d.ellipse([ex - 4, ey - 4, ex + 4, ey + 4], fill=RED)
+    OBSTACLES.append(((ex - 28, ey - 15, ex + 28, ey + 15),
+                      "peru epicentre rings", TAG[0]))
     chip_r = x + 8 + d.textlength("JUNIN — THE ANDES", font=SANS_B(13)) + 12
     d.rectangle([x + 8, y + 5, chip_r, y + 27], fill=(120, 30, 28))
     d.text((x + 14, y + 9), "JUNIN — THE ANDES", font=SANS_B(13),
@@ -803,7 +813,9 @@ def main():
                 ((x, hy, x, hy + hh), f"hero{i+1} left"),
                 ((x + hw, hy, x + hw, hy + hh), f"hero{i+1} right")):
             LINES.append((seg, lab))
+        TAG[0] = ("hero", i)
         HERO_SCENES[i](d, x + 3, hy + 3, hw - 6, 66)
+        TAG[0] = None
         yy = hy + 76
         badge(d, x + 8, yy, i + 1, region)
         flag(d, HERO_FLAGS[i], x + 40, yy + 1)
@@ -838,8 +850,11 @@ def main():
                 ((x, yy0, x, yy0 + chh), f"card{i+4} left"),
                 ((x + chw, yy0, x + chw, yy0 + chh), f"card{i+4} right")):
             LINES.append((seg, lab))
+        TAG[0] = ("card", i)
         CARD_SCENES[i](d, x + 1, yy0 + 1, 110, chh - 2)
+        TAG[0] = None
         flag(d, CARD_FLAGS[i], x + 80, yy0 + 3, w=28, h=18)
+        FLAGS.append(((x + 80, yy0 + 3, x + 108, yy0 + 21), f"card{i+4} flag", ("card", i)))
         tx = x + 116
         d.rectangle([tx, yy0 + 6, tx + 16, yy0 + 20],
                     fill=REGIONS[region][1])
@@ -964,9 +979,51 @@ def main():
         print("OVERFLOWS:", *OVERFLOWS, sep="\n  ")
     out = HERE / "entry.png"
     audit_text_boxes()
+    audit_graphics()
     img.save(out, optimize=True)
     print("wrote", out, out.stat().st_size, "bytes; stories:", total,
           "; regions:", reg_counts, "; fields:", field_counts)
+
+
+def audit_graphics():
+    """Text-vs-graphics: scene art registered as OBSTACLES must keep
+    >=3px from every text. A scene's own label texts are exempt against
+    that scene's own art (labels sit on art by design). Flags are also
+    checked against their own scene's art with NO exemption."""
+    def gap(a, b):
+        dx = max(b[0] - a[2], a[0] - b[2], 0)
+        dy = max(b[1] - a[3], a[1] - b[3], 0)
+        if dx == 0 and dy == 0:
+            return -1
+        if dx and dy:
+            return round((dx * dx + dy * dy) ** 0.5)
+        return max(dx, dy)
+    pens, mind, minpair, tested = [], 999, None, 0
+    for (tb, txt, ttag) in TEXT_BOXES:
+        for (ob, name, otag) in OBSTACLES + FLAGS:
+            if ttag is not None and ttag == otag:
+                continue
+            tested += 1
+            g = gap(tb, ob)
+            if g < 0:
+                pens.append((txt[:28], name))
+            elif g < mind:
+                mind, minpair = g, (txt[:28], name)
+    for (fb, fname, ftag) in FLAGS:
+        for (ob, name, otag) in OBSTACLES:
+            if ftag != otag:
+                continue
+            tested += 1
+            g = gap(fb, ob)
+            if g < 0:
+                pens.append((fname, name))
+            elif g < mind:
+                mind, minpair = g, (fname, name)
+    print(f"GFX-AUDIT: {tested} text/flag-vs-graphics pairs tested, "
+          f"{len(pens)} penetrations, min distance {mind}px at {minpair}")
+    for p in pens:
+        print("  GFX-PENETRATION:", p)
+    return pens
 
 
 
@@ -978,6 +1035,8 @@ def card_label(d, x, y, w, h, text):
     tw = d.textlength(text, font=SANS_B(13))
     d.rectangle([x + 3, y + h - 21, x + 3 + tw + 10, y + h - 3],
                 fill=(10, 14, 30))
+    OBSTACLES.append(((x + 3, y + h - 21, x + 3 + tw + 10, y + h - 3),
+                      f"card label chip '{text}'", TAG[0]))
     d.text((x + 8, y + h - 18), text, font=SANS_B(13), fill=(255, 255, 255))
     H_CHECKS.append((f"card scene label '{text}'",
                      round((x + 3 + tw + 10) - (x + w - 1), 1)))
@@ -1094,12 +1153,14 @@ def sc_khasab(d, x, y, w, h):
                (x + 102, y + 42)], fill=(40, 44, 52))
     d.rectangle([x + 14, y + 20, x + 26, y + 28], fill=(230, 230, 230))
     d.rectangle([x + 30, y + 23, x + 66, y + 28], fill=(90, 96, 104))
-    cx, cy = x + 88, y + 30
+    cx, cy = x + 70, y + 39
     for dx, dy in ((-12, -8), (0, -14), (12, -8), (-13, 2), (13, 2),
                    (0, 12)):
         d.line([cx, cy, cx + dx, cy + dy], fill=(255, 170, 60), width=3)
     d.ellipse([cx - 5, cy - 5, cx + 5, cy + 5], fill=(255, 240, 180))
-    _flame(d, x + 84, y + 22, 8)
+    OBSTACLES.append(((cx - 15, cy - 16, cx + 15, cy + 14),
+                      "khasab burst", TAG[0]))
+    _flame(d, x + 66, y + 29, 8)
     d.polygon([(x, y + 26), (x + 12, y + 10), (x + 24, y + 26)],
               fill=(140, 118, 92))
     card_label(d, x, y, w, h, "KHASAB")
@@ -1182,8 +1243,10 @@ def sc_mercury(d, x, y, w, h):
     for sx, sy in ((8, 6), (26, 12), (96, 4), (14, 26)):
         d.ellipse([x + sx, y + sy, x + sx + 2, y + sy + 2],
                   fill=(255, 255, 230))
-    d.ellipse([x + 52, y + 8, x + 104, y + 60], fill=(168, 164, 158))
-    for cx, cy, r in ((66, 22, 5), (84, 38, 6), (74, 50, 4), (92, 20, 4)):
+    d.ellipse([x + 36, y + 24, x + 82, y + 70], fill=(168, 164, 158))
+    OBSTACLES.append(((x + 36, y + 24, x + 82, y + 70),
+                      "mercury disc", TAG[0]))
+    for cx, cy, r in ((50, 38, 5), (68, 52, 6), (58, 62, 4), (72, 38, 4)):
         d.ellipse([x + cx - r, y + cy - r, x + cx + r, y + cy + r],
                   outline=(130, 126, 120), width=2)
     d.rectangle([x + 18, y + 24, x + 34, y + 38], fill=(200, 204, 210))
