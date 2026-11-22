@@ -5,8 +5,9 @@ Geometry first (GATES.md, approved by Ahmad 2026-11-22): the grid and
 the type floors were locked before the story count — hero headlines
 >= 30px, card headlines >= 19px, brief headlines >= 16px, brief text
 >= 14px, in-scene labels >= 13px, at most 3 heroes, briefs <= 9 words
-over 2 lines. 33 stories fit those floors: 3 heroes + 12 cards + 18
-briefs (7 briefs from the locked research set were cut, see STORIES.md).
+over 2 lines. 27 stories fit those floors: 3 heroes + 12 cards + 12 briefs
+(13 briefs from the locked research set were cut, see STORIES.md;
+the v3 map panel took the rest of the brief area).
 
 Every important number is read from figures.json (the registry); no
 panel types a figure freehand. The strap counts, the region tally and
@@ -108,45 +109,81 @@ CARDS = [
      "sets in the semi-finals.", "ATP", "C"),
 ]
 
-# Briefs: (place, region, field, headline <= ~5 words, text <= ~5 words + source)
+# Briefs: (place, region, field, headline, text) — headline + text <= 9 words.
+# v3: 12 briefs; the map panel took the rest of the brief area (see
+# STORIES.md v3 cut note). Letters were never shrunk to fit.
 BRIEFS = [
-    ("KYIV", "EUR", "Conflict", "Bridge strikes 'fair response'",
+    ("KYIV", "EUR", "Conflict", "Bridge strikes 'fair reply'",
      "109 Russian attacks cited · BBC"),
-    ("TEHRAN", "MEA", "Diplomacy", "Qatar delegation visits",
-     "For talks in Tehran · Reuters"),
-    ("SAVAR", "ASI", "Labour", "80+ garment factories shut",
-     "Wage sit-ins spread · TOI"),
+    ("TEHRAN", "MEA", "Diplomacy", "Qatar visit for talks",
+     "Delegation in Tehran · Reuters"),
+    ("SAVAR", "ASI", "Labour", "80+ factories shut",
+     "Garment wage sit-ins · TOI"),
     ("INDIA", "ASI", "Disaster", "Illicit alcohol kills 11",
      "180+ people in hospital · IOL"),
     ("BANGLADESH", "ASI", "Politics",
-     FIG["bangladesh_platoons"] + " platoons deployed",
-     "Border Guard amid unrest · Hindu"),
-    ("BEIJING", "ASI", "Diplomacy", "China: Japan, change 'attitude'",
-     "After Xi snubs Takaichi · Asharq"),
-    ("SOUTH AFRICA", "AFR", "Politics", "ANC fights for big cities",
-     "After election setback · BBC"),
-    ("KATHMANDU", "ASI", "Politics", "Balen Shah's India test",
-     "First trip abroad · BBC"),
-    ("PARIS", "EUR", "Courts", "Officers sentenced in Zecler case",
-     "Beating of producer · BBC"),
-    ("LAS VEGAS", "AME", "Sport", "Verstappen takes pole",
-     "Antonelli fastest, penalised · GP247"),
-    ("TWICKENHAM", "EUR", "Sport", "England record win v NZ",
-     "Nations Championship · BBC"),
-    ("FOOTBALL", "EUR", "Sport", "Newcastle 2-2 Arsenal",
-     "Leeds win at Chelsea · BBC"),
-    ("OBIHIRO", "ASI", "Sport", "Daleman wins 500 m in 37.45",
-     "World Cup speed skating · Pollar"),
-    ("OSLO", "EUR", "Society", "Trafalgar tree felled in Norway",
-     "21 m, 75 years old · BBC"),
-    ("ROMANIA", "EUR", "Weather", "Blizzard warning issued",
-     "Gusts 80-100 km/h · ANM"),
-    ("DHAKA", "ASI", "Sport", "Mushfiqur out of second Test",
-     "Groin injury v South Africa · EIN"),
-    ("LONDON", "EUR", "Culture", "Catherine opens up on cancer",
-     "In documentary 'Heal' · BBC"),
-    ("JUPITER", "GLO", "Science", "Europa's sodium cloud solved",
-     "Traced to salty ocean · GenFlow"),
+     FIG["bangladesh_platoons"] + " platoons out",
+     "Border Guard deployed · Hindu"),
+    ("BEIJING", "ASI", "Diplomacy", "China rebukes Japan",
+     "Over 'attitude' remark · Asharq"),
+    ("SOUTH AFRICA", "AFR", "Politics", "ANC fights on",
+     "To keep big cities · BBC"),
+    ("KATHMANDU", "ASI", "Politics", "Shah's India test",
+     "PM's first trip abroad · BBC"),
+    ("PARIS", "EUR", "Courts", "Officers sentenced",
+     "Zecler beating case · BBC"),
+    ("TWICKENHAM", "EUR", "Sport", "Record win",
+     "England, over New Zealand · BBC"),
+    ("FOOTBALL", "EUR", "Sport", "Toon 2-2 Arsenal",
+     "Newcastle draw; Leeds win · BBC"),
+    ("JUPITER", "GLO", "Science", "Europa cloud solved",
+     "Sodium from salty ocean · GenFlow"),
+]
+
+# ------------------------------------------------------------- world map
+# Coarse dot-grid world: 68 x 30 cells, lon -168..192, lat 78..-56.
+# Land is a list of (first col, last col) spans per row.
+LAND_SPANS = [
+    [(1, 5), (10, 18), (24, 27), (42, 64)],
+    [(1, 6), (8, 20), (23, 28), (38, 66)],
+    [(2, 21), (24, 27), (33, 66)],
+    [(3, 21), (24, 26), (32, 65)],
+    [(3, 20), (31, 31), (32, 64)],
+    [(4, 20), (31, 63)],
+    [(4, 19), (30, 62), (57, 58)],
+    [(4, 19), (30, 60), (56, 57)],
+    [(4, 18), (30, 58)],
+    [(5, 17), (29, 30), (34, 57)],
+    [(5, 16), (28, 57)],
+    [(6, 14), (28, 56)],
+    [(7, 13), (28, 55)],
+    [(9, 13), (28, 55)],
+    [(11, 14), (28, 56)],
+    [(16, 26), (29, 58)],
+    [(16, 26), (29, 59)],
+    [(16, 26), (30, 58)],
+    [(17, 26), (30, 38)],
+    [(17, 25), (30, 37)],
+    [(17, 25), (30, 37), (52, 61)],
+    [(18, 25), (31, 36), (42, 42), (52, 62)],
+    [(18, 24), (31, 36), (42, 42), (53, 62)],
+    [(18, 24), (31, 35), (42, 42), (53, 61)],
+    [(20, 22), (32, 34), (55, 58)],
+    [(20, 22), (64, 65)],
+    [(20, 21)],
+    [(20, 21)],
+    [(20, 21)],
+    [(20, 20)],
+]
+
+# Pins for the numbered stories (heroes 1-3, cards 4-15): (num, lon, lat,
+# dx, dy) — dx/dy nudge cluster pins apart, with a leader dot left behind.
+PINS = [
+    (1, 47, 39, 38, -4), (2, 31, 37, 16, 20), (3, -76, -11, 0, 0),
+    (4, 21, 52, 30, -6), (5, 13, 56, -26, -18), (6, 28, 60, 16, -12),
+    (7, 34, 31, -24, 30), (8, 48, 31, 44, 18), (9, 56, 26, 30, 36),
+    (10, 6, 46, -32, -4), (11, -77, 39, 0, 0), (12, -108, 26, 0, 0),
+    (13, -118, 34, 0, 0), (15, 8, 45, -14, 18),
 ]
 
 TIMELINE = [("00:09", "Peru quake"), ("05:12", "M5.0 again"),
@@ -154,12 +191,12 @@ TIMELINE = [("00:09", "Peru quake"), ("05:12", "M5.0 again"),
             ("18:22", "Ship ablaze"), ("18:24", "Bepi burn"),
             ("19:33", "COP31 stuck")]
 
-NUMBERS = [(FIG["peru_quake_magnitude"], "Peru magnitude (USGS)"),
-           (FIG["riyadh_missiles_intercepted"], "missiles over Riyadh"),
-           (FIG["geneva_robot_states"], "states at robot talks"),
-           (FIG["bangladesh_platoons"], "platoons in Bangladesh"),
-           (FIG["basra_fire_injured"], "hurt in Basra fire"),
-           (FIG["palisades_killed"], "killed in Palisades fire")]
+NUMBERS = [(FIG["peru_quake_magnitude"], "Peru magnitude"),
+           (FIG["riyadh_missiles_intercepted"], "over Riyadh"),
+           (FIG["geneva_robot_states"], "at robot talks"),
+           (FIG["bangladesh_platoons"], "platoons deployed"),
+           (FIG["basra_fire_injured"], "hurt at Basra"),
+           (FIG["palisades_killed"], "Palisades deaths")]
 
 
 def all_stories():
@@ -386,23 +423,24 @@ def scene_antalya(d, x, y, w, h):
         c = tuple(int((214, 224, 214)[i] + ((168, 186, 176)[i] - (214, 224, 214)[i]) * t)
                   for i in range(3))
         d.line([x, y + yy, x + w, y + yy], fill=c)
-    d.rectangle([x + 92, y + 5, x + w - 92, y + 27], fill=(240, 238, 228),
+    d.rectangle([x + 92, y + 8, x + w - 92, y + 38], fill=(240, 238, 228),
                 outline=INK, width=2)
-    center(d, y + 9, "COP31 — FINAL TEXT?", SERIF(15), RED, cx=x + w // 2)
+    d.text((x + w // 2, y + 23), "COP31 — FINAL TEXT?", font=SERIF(15),
+           fill=RED, anchor="mm")
     d.ellipse([x + w - 36, y + 32, x + w - 12, y + 56],
               fill=(255, 255, 255), outline=INK, width=2)
     d.line([x + w - 24, y + 44, x + w - 24, y + 36], fill=RED, width=3)
     d.line([x + w - 24, y + 44, x + w - 17, y + 48], fill=RED, width=3)
-    d.rectangle([x + 34, y + 58, x + w - 34, y + 74], fill=(96, 70, 44))
+    d.rectangle([x + 34, y + 60, x + w - 34, y + 76], fill=(96, 70, 44))
     for i in range(5):
         xx = x + 52 + i * 26
-        d.ellipse([xx, y + 36, xx + 15, y + 50], fill=(222, 184, 150))
-        d.rectangle([xx - 2, y + 50, xx + 17, y + 58], fill=TEAL)
+        d.ellipse([xx, y + 39, xx + 15, y + 53], fill=(222, 184, 150))
+        d.rectangle([xx - 2, y + 53, xx + 17, y + 60], fill=TEAL)
     for i in range(5):
         xx = x + w - 66 - i * 26
-        d.ellipse([xx, y + 36, xx + 15, y + 50], fill=(222, 184, 150))
-        d.rectangle([xx - 2, y + 50, xx + 17, y + 58], fill=RED)
-    d.rectangle([x + w // 2 - 9, y + 42, x + w // 2 + 9, y + 74], fill=NAVY)
+        d.ellipse([xx, y + 39, xx + 15, y + 53], fill=(222, 184, 150))
+        d.rectangle([xx - 2, y + 53, xx + 17, y + 60], fill=RED)
+    d.rectangle([x + w // 2 - 9, y + 44, x + w // 2 + 9, y + 76], fill=NAVY)
     scene_label(d, x, y, w, "ANTALYA — TALKS HALL")
 
 
@@ -526,19 +564,17 @@ def main():
                    max_lines=2, tag=f"card{i}")
     by = cy + 4 * (chh + 6) - 6 + 6
 
-    # ---------------------------------------------------------- briefs
-    d.rectangle([16, by, W - 16, by + 22], fill=NAVY)
-    d.text((22, by + 5), f"THE REST OF SATURDAY — {len(BRIEFS)} BRIEFS, "
-           "TWO LINES EACH", font=SANS_B(12), fill=(255, 255, 255))
-    d.text((W - 216, by + 6), "SOURCES NAMED IN EVERY BRIEF",
-           font=SANS_B(10), fill=(200, 205, 220))
-    by += 28
-    colw = (W - 32 - 20) // 3
+    # ------------------------------------------- briefs (left) + map (right)
+    sec_y = by
+    d.rectangle([16, sec_y, 536, sec_y + 22], fill=NAVY)
+    d.text((22, sec_y + 5), f"THE REST OF SATURDAY — {len(BRIEFS)} BRIEFS",
+           font=SANS_B(12), fill=(255, 255, 255))
+    colw = (536 - 16 - 10) // 2
     for i, (place, region, field, head, text) in enumerate(BRIEFS):
-        col = i % 3
-        row = i // 3
+        col = i % 2
+        row = i // 2
         x = 16 + col * (colw + 10)
-        yy = by + row * 36
+        yy = sec_y + 30 + row * 36
         d.rectangle([x, yy + 3, x + 9, yy + 12], fill=REGIONS[region][1])
         d.text((x + 14, yy), place, font=SANS_B(16), fill=REGIONS[region][1])
         px = x + 14 + d.textlength(place, font=SANS_B(16)) + 6
@@ -548,7 +584,39 @@ def main():
             OVERFLOWS.append(f"brief{i} text too wide: {text[:30]}")
         d.text((px, yy), head, font=SANS_B(16), fill=INK)
         d.text((x + 14, yy + 19), text, font=SANS(14), fill=(52, 48, 42))
-    by += 6 * 36 + 2
+
+    # map panel: pins carry the story numbers of heroes (1-3) and cards (4-15)
+    mx0, my0, mx1 = 552, sec_y, 1008
+    d.rectangle([mx0, my0, mx1, sec_y + 22], fill=NAVY)
+    d.text((mx0 + 8, my0 + 5), "WHERE IT HAPPENED — PIN = STORY NUMBER",
+           font=SANS_B(12), fill=(255, 255, 255))
+    map_y, map_h, map_w = sec_y + 28, 188, mx1 - mx0 - 16
+    map_x = mx0 + 8
+    d.rectangle([map_x, map_y, map_x + map_w, map_y + map_h], fill=(16, 26, 44))
+    cw, chh2 = map_w / 68, map_h / 30
+    for r, spans in enumerate(LAND_SPANS):
+        for c0, c1 in spans:
+            for c in range(c0, c1 + 1):
+                cx = map_x + (c + 0.5) * cw
+                cy2 = map_y + (r + 0.5) * chh2
+                d.ellipse([cx - 1.6, cy2 - 1.6, cx + 1.6, cy2 + 1.6],
+                          fill=(120, 150, 190))
+    for num, lon, lat, dx, dy in PINS:
+        tx = map_x + (lon + 168) / 360 * map_w
+        ty = map_y + (78 - lat) / 134 * map_h
+        if dx or dy:
+            d.ellipse([tx - 2, ty - 2, tx + 2, ty + 2], fill=(255, 214, 90))
+            d.line([tx, ty, tx + dx, ty + dy], fill=(255, 214, 90), width=1)
+        px2, py2 = tx + dx, ty + dy
+        d.ellipse([px2 - 11, py2 - 11, px2 + 11, py2 + 11], fill=RED,
+                  outline=(255, 255, 255), width=2)
+        t = str(num)
+        d.text((px2 - d.textlength(t, font=SANS_B(12)) / 2, py2 - 7), t,
+               font=SANS_B(12), fill=(255, 255, 255))
+    cap_y = map_y + map_h + 6
+    d.text((mx0 + 8, cap_y), "14 MERCURY — OFF THE MAP, IN SPACE · EUROPE "
+           "PINS NUDGED APART", font=SANS_B(11), fill=MUTE)
+    by = sec_y + 252
 
     # ------------------------------------------------- numbers + bars
     d.line([16, by, W - 16, by], fill=INK, width=2)
@@ -558,26 +626,26 @@ def main():
         d.text((nx, by + 3), num, font=SERIF_BLACK(20), fill=INK)
         d.text((nx, by + 25), lab, font=SANS(9), fill=MUTE)
         nx += 141
-    by += 36
+    by += 34
     d.text((16, by + 1), "REGIONS", font=SANS_B(10), fill=MUTE)
-    tally_bar(d, by, reg_counts, total, x0=76, x1=560, hgt=13)
+    tally_bar(d, by, reg_counts, total, x0=76, x1=560, hgt=12)
     d.text((576, by + 1), "FIELDS", font=SANS_B(10), fill=MUTE)
     top_fields = sorted(field_counts.items(), key=lambda kv: -kv[1])[:5]
     fx = 632
     for name, n in top_fields:
         d.text((fx, by + 1), f"{name} {n}", font=SANS_B(10), fill=INK)
         fx += d.textlength(f"{name} {n}", font=SANS_B(10)) + 10
-    by += 17
+    by += 16
 
     # ------------------------------------------------- date check + not yet
     dc = ("DATE CHECK — NOT 21 NOV, LEFT OUT: Thu 19 — Shenzhen summit, ICJ Myanmar "
           "ruling, Anthropic debut · Fri 20 — Kyiv blitz, Nasdaq -5.3% close, Bayer "
           "$7.25bn approval, Rikers plan · Sun 22 agenda is not Saturday's news.")
-    yy = text_block(d, 16, by, dc, SANS_SB(11), (70, 64, 54), W - 32, 13,
+    yy = text_block(d, 16, by, dc, SANS_SB(11), (70, 64, 54), W - 32, 12,
                     max_lines=2, tag="datecheck")
     ny = ("NOT YET KNOWN SATURDAY NIGHT: BepiColombo's burn result · a final COP31 "
           "text · Peru's full damage toll. Sources are named per story.")
-    text_block(d, 16, yy, ny, SANS_SB(11), RED, W - 32, 13,
+    text_block(d, 16, yy, ny, SANS_SB(11), RED, W - 32, 12,
                max_lines=1, tag="notyet")
 
     if OVERFLOWS:
