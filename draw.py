@@ -458,6 +458,23 @@ def flag(d, code, x, y, w=34, h=22):
     d.rectangle([x, y, x + w, y + h], outline=INK, width=1)
 
 
+CARD_INFO = [
+    FIG["poland_missiles_down"] + " missiles fell Fri; council Mon",
+    "Over a foiled assassination plot",
+    "Drone-hit ship drifts to Finland",
+    "Aid vehicle strike kills " + FIG["gaza_aid_vehicle_killed"],
+    "At least " + FIG["basra_fire_killed"] + " killed, "
+    + FIG["basra_fire_injured"] + " injured",
+    FIG["khasab_tankers_hit"] + " tankers hit off the Oman coast",
+    FIG["geneva_robot_states"] + " states, no firm pledge yet",
+    "NCIC crime database breached",
+    "FBI top-ten man held in Mexico",
+    FIG["palisades_killed"] + " killed, " + FIG["palisades_buildings"]
+    + " buildings lost",
+    "Orbit burn after " + FIG["bepicolombo_years"] + " years' flight",
+    "Final on Sunday: Zverev v Alcaraz",
+]
+
 CARD_FLAGS = ["PL", "DK", "FI", "PS", "IQ", "OM", "CH", "US", "MX", "US",
               "EU", "IT"]
 HERO_FLAGS = ["SA", "TR", "PE"]
@@ -705,15 +722,15 @@ def main():
             W // 2 - d.textlength(tl, font=SANS_B(10)) / 2, W - 8)
 
     # ---------------------------------------------------------- heroes
-    hy, hh = 165, 252
+    hy, hh = 165, 214
     hw = (W - 32 - 16) // 3
     for i, hero in enumerate(HEROES):
         x = 16 + i * (hw + 8)
         place, region, field, head, deck, src, sure, big, biglab = hero
         d.rectangle([x, hy, x + hw, hy + hh], fill=(255, 253, 246),
                     outline=INK, width=2)
-        HERO_SCENES[i](d, x + 3, hy + 3, hw - 6, 82)
-        yy = hy + 88
+        HERO_SCENES[i](d, x + 3, hy + 3, hw - 6, 78)
+        yy = hy + 84
         badge(d, x + 8, yy, i + 1, region)
         flag(d, HERO_FLAGS[i], x + 40, yy + 1)
         d.text((x + 82, yy + 2), place, font=SANS_B(12), fill=REGIONS[region][1])
@@ -726,18 +743,13 @@ def main():
                         max_lines=2, tag=f"hero{i}")
         text_block(d, x + 8, yy + 6, deck, SANS(13), (52, 48, 42), hw - 16, 15,
                    max_lines=2, tag=f"herodeck{i}")
-        d.rectangle([x + 8, hy + hh - 38, x + hw - 8, hy + hh - 4], fill=PAPER_DK)
-        d.text((x + 14, hy + hh - 36), big, font=SERIF_BLACK(28), fill=RED)
-        d.text((x + 14 + d.textlength(big, font=SERIF_BLACK(28)) + 10,
-                hy + hh - 30), biglab, font=SANS_B(11), fill=INK)
-
     # ---------------------------------------------------------- cards
-    cy = hy + hh + 5
+    cy = hy + hh + 4
     chh, chw = 72, hw
     for i, card in enumerate(CARDS):
         place, region, field, head, deck, src, sure = card
         x = 16 + (i % 3) * (chw + 8)
-        yy0 = cy + (i // 3) * (chh + 4)
+        yy0 = cy + (i // 3) * (chh + 3)
         d.rectangle([x, yy0, x + chw, yy0 + chh], fill=(255, 253, 246),
                     outline=(150, 142, 126), width=1)
         CARD_SCENES[i](d, x + 1, yy0 + 1, 110, chh - 2)
@@ -750,9 +762,12 @@ def main():
         cmeta = f"{src} - {SURE_LABEL[sure]}"
         d.text((tx + 30, yy0 + 18), cmeta, font=SANS(9), fill=MUTE)
         check_h(f"card{i+4} meta", cmeta, SANS(9), tx + 30, x + chw - 6)
-        text_block(d, tx, yy0 + 31, head, SERIF(19), INK, chw - 123, 19,
+        text_block(d, tx, yy0 + 21, head, SERIF(19), INK, chw - 123, 19,
                    max_lines=2, tag=f"card{i}")
-    by = cy + 4 * (chh + 4) - 4 + 4
+        d.text((tx, yy0 + 65), CARD_INFO[i], font=SANS(13),
+               fill=(52, 48, 42))
+        check_h(f"card{i+4} info", CARD_INFO[i], SANS(13), tx, x + chw - 6)
+    by = cy + 4 * (chh + 3) - 3 + 3
 
     # ------------------------------------------- briefs (left) + map (right)
     sec_y = by
