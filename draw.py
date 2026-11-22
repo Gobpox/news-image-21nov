@@ -355,66 +355,107 @@ def SERIF_IT(sz):
 
 
 # ------------------------------------------------------------------ flags
+def _star(d, cx, cy, r, fill):
+    import math
+    pts = []
+    for i in range(10):
+        ang = -math.pi / 2 + i * math.pi / 5
+        rr = r if i % 2 == 0 else r * 0.42
+        pts.append((cx + rr * math.cos(ang), cy + rr * math.sin(ang)))
+    d.polygon(pts, fill=fill)
+
+
 def flag(d, code, x, y, w=34, h=22):
-    """Small recognisable national flags: real patterns and colours."""
-    d.rectangle([x, y, x + w, y + h], outline=INK, width=1)
-    if code == "SA":
+    """Solid miniature flags (v3.6): every field painted in saturated
+    official colours (never the cream paper showing through), correct
+    key elements, all proportions relative to w/h so the same drawing
+    serves the 34x22 hero chips and the 28x18 card chips."""
+    WHT = (255, 255, 255)
+    d.rectangle([x, y, x + w, y + h], fill=WHT)
+    if code == "SA":  # Saudi Arabia: green, white shahada band + sword
         d.rectangle([x, y, x + w, y + h], fill=(0, 108, 53))
-        d.line([x + 5, y + 8, x + w - 5, y + 8], fill=(255, 255, 255), width=3)
-        d.line([x + 5, y + 15, x + w - 9, y + 15], fill=(255, 255, 255), width=2)
-    elif code == "TR":
+        d.rectangle([x + w * 0.16, y + h * 0.30, x + w * 0.84, y + h * 0.52],
+                    fill=WHT)
+        d.line([x + w * 0.20, y + h * 0.70, x + w * 0.80, y + h * 0.70],
+               fill=WHT, width=max(2, h // 8))
+        d.line([x + w * 0.74, y + h * 0.62, x + w * 0.74, y + h * 0.70],
+               fill=WHT, width=2)
+    elif code == "TR":  # Turkiye: red, white crescent + star
         d.rectangle([x, y, x + w, y + h], fill=(227, 10, 23))
-        d.ellipse([x + 7, y + 4, x + 21, y + 18], fill=(255, 255, 255))
-        d.ellipse([x + 10, y + 5, x + 23, y + 17], fill=(227, 10, 23))
-        d.polygon([(x + 24, y + 8), (x + 26, y + 11), (x + 24, y + 14),
-                   (x + 28, y + 11)], fill=(255, 255, 255))
-    elif code == "PE":
+        cx, cy, r = x + w * 0.40, y + h * 0.5, h * 0.30
+        d.ellipse([cx - r, cy - r, cx + r, cy + r], fill=WHT)
+        r2 = r * 0.82
+        d.ellipse([cx + r * 0.28 - r2, cy - r2, cx + r * 0.28 + r2, cy + r2],
+                  fill=(227, 10, 23))
+        _star(d, x + w * 0.70, cy, h * 0.17, WHT)
+    elif code == "PE":  # Peru: red-white-red vertical
         d.rectangle([x, y, x + w // 3, y + h], fill=(217, 0, 27))
         d.rectangle([x + 2 * w // 3, y, x + w, y + h], fill=(217, 0, 27))
-    elif code == "PL":
+    elif code == "PL":  # Poland: white over red
         d.rectangle([x, y + h // 2, x + w, y + h], fill=(220, 20, 60))
-    elif code == "DK":
-        d.rectangle([x, y, x + w, y + h], fill=(198, 12, 48))
-        d.rectangle([x + 9, y, x + 13, y + h], fill=(255, 255, 255))
-        d.rectangle([x, y + 9, x + w, y + 13], fill=(255, 255, 255))
-    elif code == "FI":
-        d.rectangle([x + 9, y, x + 14, y + h], fill=(0, 47, 108))
-        d.rectangle([x, y + 8, x + w, y + 14], fill=(0, 47, 108))
-    elif code == "PS":
-        d.rectangle([x, y + h // 3, x + w, y + 2 * h // 3], fill=(0, 0, 0))
+    elif code == "DK":  # Denmark: red, white Nordic cross
+        d.rectangle([x, y, x + w, y + h], fill=(200, 16, 46))
+        d.rectangle([x + w * 0.30, y, x + w * 0.43, y + h], fill=WHT)
+        d.rectangle([x, y + h * 0.39, x + w, y + h * 0.61], fill=WHT)
+    elif code == "FI":  # Finland: white, blue Nordic cross
+        d.rectangle([x + w * 0.28, y, x + w * 0.44, y + h], fill=(0, 47, 108))
+        d.rectangle([x, y + h * 0.36, x + w, y + h * 0.64], fill=(0, 47, 108))
+    elif code == "PS":  # Palestine: black-white-green, red hoist triangle
+        d.rectangle([x, y, x + w, y + h // 3], fill=(0, 0, 0))
         d.rectangle([x, y + 2 * h // 3, x + w, y + h], fill=(0, 122, 61))
-        d.polygon([(x, y), (x + 11, y + h // 2), (x, y + h)], fill=(238, 28, 37))
-    elif code == "IQ":
-        d.rectangle([x, y + h // 3, x + w, y + 2 * h // 3], fill=(0, 0, 0))
-        d.rectangle([x, y + 2 * h // 3, x + w, y + h], fill=(206, 17, 38))
-        d.rectangle([x + 13, y + 9, x + 21, y + 13], fill=(0, 122, 61))
-    elif code == "OM":
-        d.rectangle([x, y, x + 10, y + h], fill=(239, 51, 64))
-        d.rectangle([x + 10, y + h // 3, x + w, y + 2 * h // 3], fill=(0, 150, 57))
-        d.rectangle([x + 10, y + 2 * h // 3, x + w, y + h], fill=(0, 0, 0))
-    elif code == "CH":
-        d.rectangle([x, y, x + w, y + h], fill=(255, 255, 255))
-        d.rectangle([x + 14, y + 4, x + 20, y + 18], fill=(255, 0, 0))
-        d.rectangle([x + 9, y + 8, x + 25, y + 14], fill=(255, 0, 0))
-    elif code == "US":
-        for i in range(5):
-            d.rectangle([x, y + i * 5, x + w, y + i * 5 + 2], fill=(179, 25, 66))
-        d.rectangle([x, y, x + 15, y + 11], fill=(10, 49, 97))
-    elif code == "MX":
+        d.polygon([(x, y), (x + w * 0.42, y + h // 2), (x, y + h)],
+                  fill=(238, 28, 37))
+    elif code == "IQ":  # Iraq: red-white-black, green takbir mark
+        d.rectangle([x, y, x + w, y + h // 3], fill=(206, 17, 38))
+        d.rectangle([x, y + 2 * h // 3, x + w, y + h], fill=(0, 0, 0))
+        d.rectangle([x + w * 0.40, y + h * 0.42, x + w * 0.60, y + h * 0.58],
+                    fill=(0, 122, 61))
+    elif code == "OM":  # Oman: red hoist, white-red-green stripes
+        d.rectangle([x + w * 0.30, y + h // 3, x + w, y + 2 * h // 3],
+                    fill=(239, 51, 64))
+        d.rectangle([x + w * 0.30, y + 2 * h // 3, x + w, y + h],
+                    fill=(0, 150, 57))
+        d.rectangle([x, y, x + w * 0.30, y + h], fill=(239, 51, 64))
+        d.ellipse([x + w * 0.10, y + h * 0.12, x + w * 0.20, y + h * 0.24],
+                  fill=WHT)
+    elif code == "CH":  # Switzerland: red field, white cross
+        d.rectangle([x, y, x + w, y + h], fill=(218, 41, 28))
+        d.rectangle([x + w * 0.42, y + h * 0.20, x + w * 0.58, y + h * 0.80],
+                    fill=WHT)
+        d.rectangle([x + w * 0.26, y + h * 0.38, x + w * 0.74, y + h * 0.62],
+                    fill=WHT)
+    elif code == "US":  # USA: 13 stripes, blue canton, star dots
+        sh = h / 13
+        for i in range(13):
+            if i % 2 == 0:
+                d.rectangle([x, y + i * sh, x + w, y + (i + 1) * sh + 1],
+                            fill=(178, 34, 52))
+        cw2, ch2 = w * 0.44, sh * 7
+        d.rectangle([x, y, x + cw2, y + ch2], fill=(60, 59, 110))
+        for r in range(3):
+            for c in range(4):
+                sx = x + cw2 * (c + 0.5) / 4
+                sy = y + ch2 * (r + 0.5) / 3
+                d.ellipse([sx - 1, sy - 1, sx + 1, sy + 1], fill=WHT)
+    elif code == "MX":  # Mexico: green-white-red, centre emblem
         d.rectangle([x, y, x + w // 3, y + h], fill=(0, 104, 71))
         d.rectangle([x + 2 * w // 3, y, x + w, y + h], fill=(206, 17, 38))
-        d.ellipse([x + 14, y + 8, x + 20, y + 14], fill=(196, 148, 38))
-    elif code == "IT":
+        d.ellipse([x + w * 0.44, y + h * 0.38, x + w * 0.56, y + h * 0.62],
+                  fill=(196, 148, 38))
+    elif code == "IT":  # Italy: green-white-red vertical
         d.rectangle([x, y, x + w // 3, y + h], fill=(0, 140, 69))
         d.rectangle([x + 2 * w // 3, y, x + w, y + h], fill=(205, 33, 42))
-    elif code == "EU":
+    elif code == "EU":  # European Union: blue, circle of 12 gold stars
+        import math
         d.rectangle([x, y, x + w, y + h], fill=(0, 51, 153))
-        for i in range(6):
-            xx = x + 6 + (i % 3) * 10
-            yy = y + 4 + (i // 3) * 11
-            d.ellipse([xx, yy, xx + 3, yy + 3], fill=(255, 204, 0))
-    else:
+        cx, cy, rr = x + w / 2, y + h / 2, h * 0.32
+        for i in range(12):
+            ang = i * math.pi / 6
+            sx, sy = cx + rr * math.cos(ang), cy + rr * math.sin(ang)
+            _star(d, sx, sy, max(1.6, h * 0.075), (255, 204, 0))
+    else:  # globe marker
         d.ellipse([x + 6, y + 1, x + 28, y + 21], fill=SKY, outline=INK)
+    d.rectangle([x, y, x + w, y + h], outline=INK, width=1)
 
 
 CARD_FLAGS = ["PL", "DK", "FI", "PS", "IQ", "OM", "CH", "US", "MX", "US",
