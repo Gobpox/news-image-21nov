@@ -283,6 +283,21 @@ def center(d, y, text, font, fill, cx=W // 2):
     d.text((cx - d.textlength(text, font=font) / 2, y), text, font=font, fill=fill)
 
 
+def tracked_width(d, text, font, tracking):
+    return sum(d.textlength(ch, font=font) for ch in text) + tracking * (len(text) - 1)
+
+
+def tracked(d, x, y, text, font, fill, tracking=3):
+    for ch in text:
+        d.text((x, y), ch, font=font, fill=fill)
+        x += d.textlength(ch, font=font) + tracking
+    return x - tracking
+
+
+def SERIF_IT(sz):
+    return _f("PlayfairDisplay-SemiBoldItalic.ttf", sz)
+
+
 # ------------------------------------------------------------------ flags
 def flag(d, code, x, y, w=34, h=22):
     """Small recognisable national flags: real patterns and colours."""
@@ -532,33 +547,45 @@ def main():
         field_counts[f] = field_counts.get(f, 0) + 1
 
     # ---------------------------------------------------------- masthead
-    # v3.3 (Ahmad's explicit sizes): eyebrow small, the DATE huge,
-    # tagline small. Date fitted to the canvas width with safe margins.
-    d.rectangle([0, 0, W, 100], fill=INK)
-    center(d, 6, "THE WORLD IN ONE PICTURE", SANS_B(11), (250, 205, 90))
-    check_h("masthead eyebrow", "THE WORLD IN ONE PICTURE", SANS_B(11),
-            W // 2 - d.textlength("THE WORLD IN ONE PICTURE",
-                                  font=SANS_B(11)) / 2, W - 8)
-    center(d, 18, "SATURDAY 21 NOVEMBER 2026", SERIF_BLACK(58), PAPER)
-    check_h("masthead date", "SATURDAY 21 NOVEMBER 2026", SERIF_BLACK(58),
-            W // 2 - d.textlength("SATURDAY 21 NOVEMBER 2026",
-                                  font=SERIF_BLACK(58)) / 2, W - 20)
-    center(d, 83, "EVERY STORY DATED TO THE DAY", SANS_B(10), (250, 205, 90))
-    strap = (f"{total} STORIES: {len(HEROES)} HEROES + {len(CARDS)} CARDS + "
-             f"{len(BRIEFS)} BRIEFS  -  {len(reg_counts)} REGIONS  -  "
-             f"{len(field_counts)} FIELDS")
-    d.rectangle([0, 100, W, 130], fill=RED)
-    center(d, 103, strap, SANS_B(12), (255, 255, 255))
-    check_h("strap", strap, SANS_B(12),
-            W // 2 - d.textlength(strap, font=SANS_B(12)) / 2, W - 8)
-    tl = "SATURDAY IN UTC:  " + "  ·  ".join(f"{t} {l}" for t, l in TIMELINE)
-    center(d, 117, tl, SANS_B(9), (255, 224, 214))
-    check_h("timeline", tl, SANS_B(9),
-            W // 2 - d.textlength(tl, font=SANS_B(9)) / 2, W - 8)
-    d.line([16, 136, W - 16, 136], fill=INK, width=2)
+    # v3.4: newspaper head in the winners' typographic system (refs:
+    # ni21 dev top-1/2) — tracked small-caps eyebrow row with the counts
+    # on the right, a giant title-case serif date, an italic summary
+    # strap naming the day's three hero stories, double rules with a
+    # red diamond, all on paper so head and body are one page.
+    eyebrow = "THE WORLD IN ONE PICTURE"
+    counts = (f"{total} STORIES \u00b7 {len(reg_counts)} REGIONS \u00b7 "
+              "EVERY STORY DATED TO THE DAY")
+    tracked(d, 16, 7, eyebrow, SANS_B(12), RED, tracking=3)
+    cw_counts = tracked_width(d, counts, SANS_B(11), 2)
+    tracked(d, W - 16 - cw_counts, 8, counts, SANS_B(11), INK, tracking=2)
+    H_CHECKS.append(("eyebrow row overlap", round(
+        (16 + tracked_width(d, eyebrow, SANS_B(12), 3))
+        - (W - 16 - cw_counts), 1)))
+    d.line([16, 25, W - 16, 25], fill=INK, width=1)
+    date_font = fit_font("Saturday 21 November 2026", 964, SERIF_BLACK, 84, 40)
+    center(d, 30, "Saturday 21 November 2026", date_font, INK)
+    check_h("masthead date", "Saturday 21 November 2026", date_font,
+            W // 2 - d.textlength("Saturday 21 November 2026",
+                                  font=date_font) / 2, W - 30)
+    strap = ("COP31 runs past its deadline \u00b7 Three missiles shot down "
+             "over Riyadh \u00b7 Magnitude " + FIG["peru_quake_magnitude"]
+             + " quake shakes Peru")
+    center(d, 105, strap, SERIF_IT(17), INK)
+    check_h("summary strap", strap, SERIF_IT(17),
+            W // 2 - d.textlength(strap, font=SERIF_IT(17)) / 2, W - 16)
+    d.line([16, 129, W - 16, 129], fill=INK, width=1)
+    d.line([16, 133, W - 16, 133], fill=INK, width=3)
+    d.rectangle([W // 2 - 14, 127, W // 2 + 14, 139], fill=PAPER)
+    d.polygon([(W // 2, 128), (W // 2 + 6, 133), (W // 2, 138),
+               (W // 2 - 6, 133)], fill=RED)
+    tl = "SATURDAY IN UTC:  " + "  \u00b7  ".join(f"{t} {l}" for t, l in TIMELINE)
+    d.rectangle([0, 141, W, 161], fill=RED)
+    center(d, 146, tl, SANS_B(10), (255, 255, 255))
+    check_h("timeline", tl, SANS_B(10),
+            W // 2 - d.textlength(tl, font=SANS_B(10)) / 2, W - 8)
 
     # ---------------------------------------------------------- heroes
-    hy, hh = 140, 252
+    hy, hh = 165, 252
     hw = (W - 32 - 16) // 3
     for i, hero in enumerate(HEROES):
         x = 16 + i * (hw + 8)
@@ -585,12 +612,12 @@ def main():
                 hy + hh - 30), biglab, font=SANS_B(11), fill=INK)
 
     # ---------------------------------------------------------- cards
-    cy = hy + hh + 6
+    cy = hy + hh + 5
     chh, chw = 72, hw
     for i, card in enumerate(CARDS):
         place, region, field, head, deck, src, sure = card
         x = 16 + (i % 3) * (chw + 8)
-        yy0 = cy + (i // 3) * (chh + 5)
+        yy0 = cy + (i // 3) * (chh + 4)
         d.rectangle([x, yy0, x + chw, yy0 + chh], fill=(255, 253, 246),
                     outline=(150, 142, 126), width=1)
         CARD_SCENES[i](d, x + 1, yy0 + 1, 110, chh - 2)
@@ -605,7 +632,7 @@ def main():
         check_h(f"card{i+4} meta", cmeta, SANS(9), tx + 30, x + chw - 6)
         text_block(d, tx, yy0 + 32, head, SERIF(19), INK, chw - 123, 18,
                    max_lines=2, tag=f"card{i}")
-    by = cy + 4 * (chh + 5) - 5 + 5
+    by = cy + 4 * (chh + 4) - 4 + 4
 
     # ------------------------------------------- briefs (left) + map (right)
     sec_y = by
@@ -617,7 +644,7 @@ def main():
         col = i % 2
         row = i // 2
         x = 16 + col * (colw + 10)
-        yy = sec_y + 30 + row * 34
+        yy = sec_y + 30 + row * 32
         d.rectangle([x, yy + 3, x + 9, yy + 12], fill=REGIONS[region][1])
         d.text((x + 14, yy), place, font=SANS_B(16), fill=REGIONS[region][1])
         px = x + 14 + d.textlength(place, font=SANS_B(16)) + 6
@@ -626,7 +653,7 @@ def main():
         if d.textlength(text, font=SANS(14)) > colw - 14:
             OVERFLOWS.append(f"brief{i} text too wide: {text[:30]}")
         d.text((px, yy), head, font=SANS_B(16), fill=INK)
-        d.text((x + 14, yy + 19), text, font=SANS(14), fill=(52, 48, 42))
+        d.text((x + 14, yy + 17), text, font=SANS(14), fill=(52, 48, 42))
 
     # map panel: pins carry the story numbers of heroes (1-3) and cards (4-15)
     mx0, my0, mx1 = 552, sec_y, 1008
@@ -637,7 +664,7 @@ def main():
             SANS_B(12), mx0 + 8, mx1 - 8)
     check_h("briefs header", f"THE REST OF SATURDAY — {len(BRIEFS)} BRIEFS",
             SANS_B(12), 22, 536 - 8)
-    map_y, map_h, map_w = sec_y + 28, 188, mx1 - mx0 - 16
+    map_y, map_h, map_w = sec_y + 28, 168, mx1 - mx0 - 16
     map_x = mx0 + 8
     d.rectangle([map_x, map_y, map_x + map_w, map_y + map_h], fill=(16, 26, 44))
     cw, chh2 = map_w / 68, map_h / 30
@@ -665,33 +692,34 @@ def main():
            "PINS NUDGED APART", font=SANS_B(11), fill=MUTE)
     check_h("map caption", "14 MERCURY — OFF THE MAP, IN SPACE · EUROPE "
             "PINS NUDGED APART", SANS_B(11), mx0 + 8, mx1 - 8)
-    by = sec_y + 234
+    by = sec_y + 222
 
     # ------------------------------------------------- numbers + bars
     d.line([16, by, W - 16, by], fill=INK, width=2)
-    d.text((16, by + 5), "THE DAY IN NUMBERS", font=SANS_B(12), fill=RED)
+    d.text((16, by + 7), "THE DAY IN NUMBERS", font=SANS_B(12), fill=RED)
     nx = 172
     for num, lab in NUMBERS:
         d.text((nx, by + 3), num, font=SERIF_BLACK(20), fill=INK)
-        d.text((nx, by + 25), lab, font=SANS(9), fill=MUTE)
-        check_h(f"numbers label '{lab}'", lab, SANS(9), nx, nx + 137)
+        lx = nx + d.textlength(num, font=SERIF_BLACK(20)) + 6
+        d.text((lx, by + 9), lab, font=SANS(9), fill=MUTE)
+        check_h(f"numbers label '{lab}'", lab, SANS(9), lx, nx + 139)
         nx += 141
-    by += 31
+    by += 23
     d.text((16, by + 1), "REGIONS", font=SANS_B(10), fill=MUTE)
-    tally_bar(d, by, reg_counts, total, x0=76, x1=560, hgt=12)
+    tally_bar(d, by, reg_counts, total, x0=76, x1=560, hgt=11)
     d.text((576, by + 1), "FIELDS", font=SANS_B(10), fill=MUTE)
     top_fields = sorted(field_counts.items(), key=lambda kv: -kv[1])[:5]
     fx = 632
     for name, n in top_fields:
         d.text((fx, by + 1), f"{name} {n}", font=SANS_B(10), fill=INK)
         fx += d.textlength(f"{name} {n}", font=SANS_B(10)) + 10
-    by += 16
+    by += 13
 
     # ------------------------------------------------- date check + not yet
     dc = ("DATE CHECK — NOT 21 NOV, LEFT OUT: Thu 19 — Shenzhen summit, ICJ Myanmar "
           "ruling, Anthropic debut · Fri 20 — Kyiv blitz, Nasdaq -5.3% close, Bayer "
           "$7.25bn approval, Rikers plan · Sun 22 agenda is not Saturday's news.")
-    yy = text_block(d, 16, by, dc, SANS_SB(11), (70, 64, 54), W - 32, 12,
+    yy = text_block(d, 16, by, dc, SANS_SB(11), (70, 64, 54), W - 32, 11,
                     max_lines=2, tag="datecheck")
     ny = ("NOT YET KNOWN SATURDAY NIGHT: BepiColombo's burn result · a final COP31 "
           "text · Peru's full damage toll. Sources are named per story.")
