@@ -241,6 +241,17 @@ def fit_font(text, maxw, maker, hi, lo):
 
 
 OVERFLOWS = []
+BANNER_CHECK = []
+H_CHECKS = []
+
+
+def check_h(label, text, font, x_start, x_limit):
+    """Horizontal overflow check: measured text end must stay inside limit."""
+    end = x_start + ImageDraw.Draw(Image.new("RGB", (8, 8))).textlength(
+        text, font=font)
+    H_CHECKS.append((label, round(end - x_limit, 1)))
+    if end > x_limit:
+        OVERFLOWS.append(f"H-OVERFLOW {label}: ends {end:.0f} > {x_limit}")
 
 
 def wrap(d, text, font, maxw):
@@ -385,9 +396,14 @@ def icon(d, field, x, y, col):
 
 # ------------------------------------------------------------------ scenes
 def scene_label(d, x, y, w, text):
-    d.rectangle([x + 8, y + 56, x + 8 + d.textlength(text, font=SANS_B(13)) + 12,
-                 y + 78], fill=(10, 14, 30))
+    chip_r = x + 8 + d.textlength(text, font=SANS_B(13)) + 12
+    d.rectangle([x + 8, y + 56, chip_r, y + 78], fill=(10, 14, 30))
     d.text((x + 14, y + 60), text, font=SANS_B(13), fill=(255, 255, 255))
+    H_CHECKS.append((f"scene label '{text}' right margin",
+                     round((chip_r - 6) - (x + 14 + d.textlength(
+                         text, font=SANS_B(13))), 1)))
+    if x + 14 + d.textlength(text, font=SANS_B(13)) > chip_r - 6:
+        OVERFLOWS.append(f"H-OVERFLOW scene label: {text}")
 
 
 def scene_riyadh(d, x, y, w, h):
@@ -423,24 +439,30 @@ def scene_antalya(d, x, y, w, h):
         c = tuple(int((214, 224, 214)[i] + ((168, 186, 176)[i] - (214, 224, 214)[i]) * t)
                   for i in range(3))
         d.line([x, y + yy, x + w, y + yy], fill=c)
-    d.rectangle([x + 92, y + 8, x + w - 92, y + 38], fill=(240, 238, 228),
-                outline=INK, width=2)
-    d.text((x + w // 2, y + 23), "COP31 — FINAL TEXT?", font=SERIF(15),
+    plate = [x + 52, y + 8, x + w - 52, y + 40]
+    d.rectangle(plate, fill=(240, 238, 228), outline=INK, width=2)
+    d.text((x + w // 2, y + 24), "COP31 — FINAL TEXT?", font=SERIF(15),
            fill=RED, anchor="mm")
-    d.ellipse([x + w - 36, y + 32, x + w - 12, y + 56],
+    tb = d.textbbox((x + w // 2, y + 24), "COP31 — FINAL TEXT?",
+                    font=SERIF(15), anchor="mm")
+    margins = (tb[0] - plate[0], tb[1] - plate[1],
+               plate[2] - tb[2], plate[3] - tb[3])
+    BANNER_CHECK.append((tb, tuple(plate), margins))
+    assert min(margins) >= 6, f"banner text escapes plate: margins {margins}"
+    d.ellipse([x + w - 36, y + 44, x + w - 12, y + 68],
               fill=(255, 255, 255), outline=INK, width=2)
-    d.line([x + w - 24, y + 44, x + w - 24, y + 36], fill=RED, width=3)
-    d.line([x + w - 24, y + 44, x + w - 17, y + 48], fill=RED, width=3)
-    d.rectangle([x + 34, y + 60, x + w - 34, y + 76], fill=(96, 70, 44))
+    d.line([x + w - 24, y + 56, x + w - 24, y + 48], fill=RED, width=3)
+    d.line([x + w - 24, y + 56, x + w - 17, y + 60], fill=RED, width=3)
+    d.rectangle([x + 34, y + 62, x + w - 34, y + 78], fill=(96, 70, 44))
     for i in range(5):
         xx = x + 52 + i * 26
-        d.ellipse([xx, y + 39, xx + 15, y + 53], fill=(222, 184, 150))
-        d.rectangle([xx - 2, y + 53, xx + 17, y + 60], fill=TEAL)
+        d.ellipse([xx, y + 42, xx + 15, y + 56], fill=(222, 184, 150))
+        d.rectangle([xx - 2, y + 56, xx + 17, y + 62], fill=TEAL)
     for i in range(5):
         xx = x + w - 66 - i * 26
-        d.ellipse([xx, y + 39, xx + 15, y + 53], fill=(222, 184, 150))
-        d.rectangle([xx - 2, y + 53, xx + 17, y + 60], fill=RED)
-    d.rectangle([x + w // 2 - 9, y + 44, x + w // 2 + 9, y + 76], fill=NAVY)
+        d.ellipse([xx, y + 42, xx + 15, y + 56], fill=(222, 184, 150))
+        d.rectangle([xx - 2, y + 56, xx + 17, y + 62], fill=RED)
+    d.rectangle([x + w // 2 - 9, y + 46, x + w // 2 + 9, y + 78], fill=NAVY)
     scene_label(d, x, y, w, "ANTALYA — TALKS HALL")
 
 
@@ -463,10 +485,13 @@ def scene_peru(d, x, y, w, h):
     for r in (10, 18, 26):
         d.ellipse([ex - r, ey - r // 2, ex + r, ey + r // 2], outline=RED, width=3)
     d.ellipse([ex - 4, ey - 4, ex + 4, ey + 4], fill=RED)
-    d.rectangle([x + 8, y + 5, x + 8 + d.textlength("JUNIN — THE ANDES", font=SANS_B(13)) + 12,
-                 y + 27], fill=(120, 30, 28))
+    chip_r = x + 8 + d.textlength("JUNIN — THE ANDES", font=SANS_B(13)) + 12
+    d.rectangle([x + 8, y + 5, chip_r, y + 27], fill=(120, 30, 28))
     d.text((x + 14, y + 9), "JUNIN — THE ANDES", font=SANS_B(13),
            fill=(255, 255, 255))
+    H_CHECKS.append(("scene label 'JUNIN' right margin",
+                     round((chip_r - 6) - (x + 14 + d.textlength(
+                         "JUNIN — THE ANDES", font=SANS_B(13))), 1)))
 
 
 HERO_SCENES = [scene_riyadh, scene_antalya, scene_peru]
@@ -509,6 +534,9 @@ def main():
     # ---------------------------------------------------------- masthead
     d.rectangle([0, 0, W, 58], fill=INK)
     center(d, 5, "THE WORLD IN ONE PICTURE", SERIF_BLACK(29), PAPER)
+    check_h("masthead title", "THE WORLD IN ONE PICTURE", SERIF_BLACK(29),
+            W // 2 - d.textlength("THE WORLD IN ONE PICTURE",
+                                  font=SERIF_BLACK(29)) / 2, W - 8)
     center(d, 38, "SATURDAY 21 NOVEMBER 2026  -  EVERY STORY DATED TO THE DAY",
            SANS_B(12), (250, 205, 90))
     strap = (f"{total} STORIES: {len(HEROES)} HEROES + {len(CARDS)} CARDS + "
@@ -516,8 +544,11 @@ def main():
              f"{len(field_counts)} FIELDS")
     d.rectangle([0, 58, W, 80], fill=RED)
     center(d, 62, strap, SANS_B(13), (255, 255, 255))
+    check_h("strap", strap, SANS_B(13),
+            W // 2 - d.textlength(strap, font=SANS_B(13)) / 2, W - 8)
     tl = "SATURDAY IN UTC:  " + "  ·  ".join(f"{t} {l}" for t, l in TIMELINE)
     d.text((16, 84), tl, font=SANS_B(10), fill=INK)
+    check_h("timeline", tl, SANS_B(10), 16, W - 16)
     d.line([16, 104, W - 16, 104], fill=INK, width=2)
 
     # ---------------------------------------------------------- heroes
@@ -533,8 +564,10 @@ def main():
         badge(d, x + 8, yy, i + 1, region)
         flag(d, HERO_FLAGS[i], x + 40, yy + 1)
         d.text((x + 82, yy + 2), place, font=SANS_B(12), fill=REGIONS[region][1])
-        d.text((x + 82, yy + 15), f"{field.upper()} - {src} - {SURE_LABEL[sure]}",
-               font=SANS(10), fill=MUTE)
+        check_h(f"hero{i+1} place", place, SANS_B(12), x + 82, x + hw - 8)
+        meta = f"{field.upper()} - {src} - {SURE_LABEL[sure]}"
+        d.text((x + 82, yy + 15), meta, font=SANS(10), fill=MUTE)
+        check_h(f"hero{i+1} meta", meta, SANS(10), x + 82, x + hw - 8)
         yy += 26
         yy = text_block(d, x + 8, yy, head, SERIF(30), INK, hw - 16, 32,
                         max_lines=2, tag=f"hero{i}")
@@ -557,8 +590,10 @@ def main():
         badge(d, x + 6, yy0 + 5, i + 4, region)
         flag(d, CARD_FLAGS[i], x + 36, yy0 + 6, w=28, h=18)
         d.text((x + 70, yy0 + 5), place, font=SANS_B(11), fill=REGIONS[region][1])
-        d.text((x + 70, yy0 + 17), f"{field.upper()} - {src} - {SURE_LABEL[sure]}",
-               font=SANS(9), fill=MUTE)
+        check_h(f"card{i+4} place", place, SANS_B(11), x + 70, x + chw - 38)
+        cmeta = f"{field.upper()} - {src} - {SURE_LABEL[sure]}"
+        d.text((x + 70, yy0 + 17), cmeta, font=SANS(9), fill=MUTE)
+        check_h(f"card{i+4} meta", cmeta, SANS(9), x + 70, x + chw - 38)
         icon(d, field, x + chw - 32, yy0 + 5, REGIONS[region][1])
         text_block(d, x + 6, yy0 + 29, head, SERIF(19), INK, chw - 12, 21,
                    max_lines=2, tag=f"card{i}")
@@ -590,6 +625,10 @@ def main():
     d.rectangle([mx0, my0, mx1, sec_y + 22], fill=NAVY)
     d.text((mx0 + 8, my0 + 5), "WHERE IT HAPPENED — PIN = STORY NUMBER",
            font=SANS_B(12), fill=(255, 255, 255))
+    check_h("map header", "WHERE IT HAPPENED — PIN = STORY NUMBER",
+            SANS_B(12), mx0 + 8, mx1 - 8)
+    check_h("briefs header", f"THE REST OF SATURDAY — {len(BRIEFS)} BRIEFS",
+            SANS_B(12), 22, 536 - 8)
     map_y, map_h, map_w = sec_y + 28, 188, mx1 - mx0 - 16
     map_x = mx0 + 8
     d.rectangle([map_x, map_y, map_x + map_w, map_y + map_h], fill=(16, 26, 44))
@@ -616,6 +655,8 @@ def main():
     cap_y = map_y + map_h + 6
     d.text((mx0 + 8, cap_y), "14 MERCURY — OFF THE MAP, IN SPACE · EUROPE "
            "PINS NUDGED APART", font=SANS_B(11), fill=MUTE)
+    check_h("map caption", "14 MERCURY — OFF THE MAP, IN SPACE · EUROPE "
+            "PINS NUDGED APART", SANS_B(11), mx0 + 8, mx1 - 8)
     by = sec_y + 252
 
     # ------------------------------------------------- numbers + bars
@@ -625,6 +666,7 @@ def main():
     for num, lab in NUMBERS:
         d.text((nx, by + 3), num, font=SERIF_BLACK(20), fill=INK)
         d.text((nx, by + 25), lab, font=SANS(9), fill=MUTE)
+        check_h(f"numbers label '{lab}'", lab, SANS(9), nx, nx + 137)
         nx += 141
     by += 34
     d.text((16, by + 1), "REGIONS", font=SANS_B(10), fill=MUTE)
@@ -648,6 +690,14 @@ def main():
     text_block(d, 16, yy, ny, SANS_SB(11), RED, W - 32, 12,
                max_lines=1, tag="notyet")
 
+    print(f"H-CHECKS: {len(H_CHECKS)} measured, "
+          f"{sum(1 for _, v in H_CHECKS if v > 0)} over limit")
+    for lab, v in H_CHECKS:
+        if v > -30:
+            print(f"  h-check {lab}: slack {-v:+.1f}px")
+    for tb, plate, margins in BANNER_CHECK:
+        print(f"BANNER bbox text={tb} plate={plate} "
+              f"margins L/T/R/B={margins}")
     if OVERFLOWS:
         print("OVERFLOWS:", *OVERFLOWS, sep="\n  ")
     out = HERE / "entry.png"
