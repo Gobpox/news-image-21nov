@@ -243,6 +243,57 @@ def fit_font(text, maxw, maker, hi, lo):
 OVERFLOWS = []
 BANNER_CHECK = []
 H_CHECKS = []
+TEXT_BOXES = []
+
+
+class RecDraw:
+    """Wraps ImageDraw: records the ink bbox of every text() call."""
+
+    def __init__(self, real):
+        object.__setattr__(self, "_r", real)
+        object.__setattr__(self, "suspend", False)
+
+    def text(self, xy, s, font=None, fill=None, **kw):
+        if not self.suspend and font is not None:
+            TEXT_BOXES.append((self._r.textbbox(xy, s, font=font), s))
+        return self._r.text(xy, s, font=font, fill=fill, **kw)
+
+    def __getattr__(self, name):
+        return getattr(self._r, name)
+
+    def __setattr__(self, name, value):
+        if name in ("_r", "suspend"):
+            object.__setattr__(self, name, value)
+        else:
+            setattr(self._r, name, value)
+
+
+def audit_text_boxes():
+    n = len(TEXT_BOXES)
+    hits, near = [], []
+    for i in range(n):
+        (ax0, ay0, ax1, ay1), sa = TEXT_BOXES[i]
+        for j in range(i + 1, n):
+            (bx0, by0, bx1, by1), sb = TEXT_BOXES[j]
+            xo = min(ax1, bx1) - max(ax0, bx0)
+            yo = min(ay1, by1) - max(ay0, by0)
+            if xo > 0 and yo > 0:
+                hits.append((sa[:38], sb[:38], xo, yo))
+            elif xo > 0:
+                gap = max(by0 - ay1, ay0 - by1)
+                if gap < 3:
+                    near.append((sa[:38], sb[:38], "v", gap))
+            elif yo > 0:
+                gap = max(bx0 - ax1, ax0 - bx1)
+                if gap < 3:
+                    near.append((sa[:38], sb[:38], "h", gap))
+    print(f"TEXT-AUDIT: {n} text boxes, {n * (n - 1) // 2} pairs checked, "
+          f"{len(hits)} intersections, {len(near)} near-misses (<3px)")
+    for h in hits:
+        print("  INTERSECT:", h)
+    for h in near:
+        print("  NEAR:", h)
+    return hits, near
 
 
 def check_h(label, text, font, x_start, x_limit):
@@ -288,9 +339,14 @@ def tracked_width(d, text, font, tracking):
 
 
 def tracked(d, x, y, text, font, fill, tracking=3):
+    bb = d.textbbox((x, y), text, font=font)
+    TEXT_BOXES.append(((bb[0], bb[1], bb[2] + tracking * (len(text) - 1),
+                        bb[3]), text))
+    d.suspend = True
     for ch in text:
         d.text((x, y), ch, font=font, fill=fill)
         x += d.textlength(ch, font=font) + tracking
+    d.suspend = False
     return x - tracking
 
 
@@ -538,7 +594,7 @@ def tally_bar(d, y, counts, total, x0=76, x1=560, hgt=13):
 
 def main():
     img = Image.new("RGB", (W, H), PAPER)
-    d = ImageDraw.Draw(img)
+    d = RecDraw(ImageDraw.Draw(img))
     stories = all_stories()
     total = len(stories)
     reg_counts, field_counts = {}, {}
@@ -562,25 +618,48 @@ def main():
         (16 + tracked_width(d, eyebrow, SANS_B(12), 3))
         - (W - 16 - cw_counts), 1)))
     d.line([16, 25, W - 16, 25], fill=INK, width=1)
-    date_font = fit_font("Saturday 21 November 2026", 964, SERIF_BLACK, 84, 40)
-    center(d, 30, "Saturday 21 November 2026", date_font, INK)
-    check_h("masthead date", "Saturday 21 November 2026", date_font,
-            W // 2 - d.textlength("Saturday 21 November 2026",
-                                  font=date_font) / 2, W - 30)
     strap = ("COP31 runs past its deadline \u00b7 Three missiles shot down "
              "over Riyadh \u00b7 Magnitude " + FIG["peru_quake_magnitude"]
              + " quake shakes Peru")
-    center(d, 105, strap, SERIF_IT(17), INK)
+    # v3.5: pack date -> strap -> rules by MEASURED ink bboxes, with a
+    # guaranteed >=6px clear gap at each step (Ahmad: no descender of
+    # the date may touch the strap; no strap descender may touch the
+    # rule). Shrink the date until the whole stack fits above y=163.
+    sbb = d.textbbox((0, 0), strap, font=SERIF_IT(17))
+    for S in range(78, 59, -1):
+        fnt = SERIF_BLACK(S)
+        if d.textlength("Saturday 21 November 2026", font=fnt) > 964:
+            continue
+        bb = d.textbbox((0, 0), "Saturday 21 November 2026", font=fnt)
+        date_y = 31 - bb[1]
+        date_ink_bot = date_y + bb[3]
+        strap_y = date_ink_bot + 6 - sbb[1]
+        strap_ink_bot = strap_y + sbb[3]
+        rule1 = strap_ink_bot + 6
+        if rule1 + 4 + 8 + 20 <= 163:
+            break
+    date_font = fnt
+    print(f"MASTHEAD-PACK: date {S}px width "
+          f"{round(d.textlength('Saturday 21 November 2026', font=fnt))}px; "
+          f"date ink bottom {date_ink_bot}, strap ink top "
+          f"{strap_y + sbb[1]} -> gap {strap_y + sbb[1] - date_ink_bot}px; "
+          f"strap ink bottom {strap_ink_bot}, rule at {rule1} "
+          f"-> gap {rule1 - strap_ink_bot}px")
+    center(d, date_y, "Saturday 21 November 2026", date_font, INK)
+    check_h("masthead date", "Saturday 21 November 2026", date_font,
+            W // 2 - d.textlength("Saturday 21 November 2026",
+                                  font=date_font) / 2, W - 30)
+    center(d, strap_y, strap, SERIF_IT(17), INK)
     check_h("summary strap", strap, SERIF_IT(17),
             W // 2 - d.textlength(strap, font=SERIF_IT(17)) / 2, W - 16)
-    d.line([16, 129, W - 16, 129], fill=INK, width=1)
-    d.line([16, 133, W - 16, 133], fill=INK, width=3)
-    d.rectangle([W // 2 - 14, 127, W // 2 + 14, 139], fill=PAPER)
-    d.polygon([(W // 2, 128), (W // 2 + 6, 133), (W // 2, 138),
-               (W // 2 - 6, 133)], fill=RED)
+    d.line([16, rule1, W - 16, rule1], fill=INK, width=1)
+    d.line([16, rule1 + 4, W - 16, rule1 + 4], fill=INK, width=3)
+    d.rectangle([W // 2 - 14, rule1 - 2, W // 2 + 14, rule1 + 10], fill=PAPER)
+    d.polygon([(W // 2, rule1 - 1), (W // 2 + 6, rule1 + 4),
+               (W // 2, rule1 + 9), (W // 2 - 6, rule1 + 4)], fill=RED)
     tl = "SATURDAY IN UTC:  " + "  \u00b7  ".join(f"{t} {l}" for t, l in TIMELINE)
-    d.rectangle([0, 141, W, 161], fill=RED)
-    center(d, 146, tl, SANS_B(10), (255, 255, 255))
+    d.rectangle([0, rule1 + 12, W, rule1 + 32], fill=RED)
+    center(d, rule1 + 17, tl, SANS_B(10), (255, 255, 255))
     check_h("timeline", tl, SANS_B(10),
             W // 2 - d.textlength(tl, font=SANS_B(10)) / 2, W - 8)
 
@@ -599,15 +678,15 @@ def main():
         d.text((x + 82, yy + 2), place, font=SANS_B(12), fill=REGIONS[region][1])
         check_h(f"hero{i+1} place", place, SANS_B(12), x + 82, x + hw - 8)
         meta = f"{field.upper()} - {src} - {SURE_LABEL[sure]}"
-        d.text((x + 82, yy + 15), meta, font=SANS(10), fill=MUTE)
+        d.text((x + 82, yy + 16), meta, font=SANS(10), fill=MUTE)
         check_h(f"hero{i+1} meta", meta, SANS(10), x + 82, x + hw - 8)
-        yy += 26
+        yy += 24
         yy = text_block(d, x + 8, yy, head, SERIF(30), INK, hw - 16, 32,
                         max_lines=2, tag=f"hero{i}")
-        text_block(d, x + 8, yy, deck, SANS(13), (52, 48, 42), hw - 16, 16,
+        text_block(d, x + 8, yy + 6, deck, SANS(13), (52, 48, 42), hw - 16, 15,
                    max_lines=2, tag=f"herodeck{i}")
-        d.rectangle([x + 8, hy + hh - 42, x + hw - 8, hy + hh - 6], fill=PAPER_DK)
-        d.text((x + 14, hy + hh - 40), big, font=SERIF_BLACK(28), fill=RED)
+        d.rectangle([x + 8, hy + hh - 38, x + hw - 8, hy + hh - 4], fill=PAPER_DK)
+        d.text((x + 14, hy + hh - 36), big, font=SERIF_BLACK(28), fill=RED)
         d.text((x + 14 + d.textlength(big, font=SERIF_BLACK(28)) + 10,
                 hy + hh - 30), biglab, font=SANS_B(11), fill=INK)
 
@@ -630,7 +709,7 @@ def main():
         cmeta = f"{src} - {SURE_LABEL[sure]}"
         d.text((tx + 30, yy0 + 18), cmeta, font=SANS(9), fill=MUTE)
         check_h(f"card{i+4} meta", cmeta, SANS(9), tx + 30, x + chw - 6)
-        text_block(d, tx, yy0 + 32, head, SERIF(19), INK, chw - 123, 18,
+        text_block(d, tx, yy0 + 31, head, SERIF(19), INK, chw - 123, 19,
                    max_lines=2, tag=f"card{i}")
     by = cy + 4 * (chh + 4) - 4 + 4
 
@@ -699,12 +778,12 @@ def main():
     d.text((16, by + 7), "THE DAY IN NUMBERS", font=SANS_B(12), fill=RED)
     nx = 172
     for num, lab in NUMBERS:
-        d.text((nx, by + 3), num, font=SERIF_BLACK(20), fill=INK)
+        d.text((nx, by + 2), num, font=SERIF_BLACK(20), fill=INK)
         lx = nx + d.textlength(num, font=SERIF_BLACK(20)) + 6
-        d.text((lx, by + 9), lab, font=SANS(9), fill=MUTE)
+        d.text((lx, by + 8), lab, font=SANS(9), fill=MUTE)
         check_h(f"numbers label '{lab}'", lab, SANS(9), lx, nx + 139)
         nx += 141
-    by += 23
+    by += 28
     d.text((16, by + 1), "REGIONS", font=SANS_B(10), fill=MUTE)
     tally_bar(d, by, reg_counts, total, x0=76, x1=560, hgt=11)
     d.text((576, by + 1), "FIELDS", font=SANS_B(10), fill=MUTE)
@@ -713,7 +792,7 @@ def main():
     for name, n in top_fields:
         d.text((fx, by + 1), f"{name} {n}", font=SANS_B(10), fill=INK)
         fx += d.textlength(f"{name} {n}", font=SANS_B(10)) + 10
-    by += 13
+    by += 11
 
     # ------------------------------------------------- date check + not yet
     dc = ("DATE CHECK — NOT 21 NOV, LEFT OUT: Thu 19 — Shenzhen summit, ICJ Myanmar "
@@ -723,7 +802,7 @@ def main():
                     max_lines=2, tag="datecheck")
     ny = ("NOT YET KNOWN SATURDAY NIGHT: BepiColombo's burn result · a final COP31 "
           "text · Peru's full damage toll. Sources are named per story.")
-    text_block(d, 16, yy, ny, SANS_SB(11), RED, W - 32, 12,
+    text_block(d, 16, yy + 2, ny, SANS_SB(11), RED, W - 32, 12,
                max_lines=1, tag="notyet")
 
     print(f"H-CHECKS: {len(H_CHECKS)} measured, "
@@ -737,6 +816,7 @@ def main():
     if OVERFLOWS:
         print("OVERFLOWS:", *OVERFLOWS, sep="\n  ")
     out = HERE / "entry.png"
+    audit_text_boxes()
     img.save(out, optimize=True)
     print("wrote", out, out.stat().st_size, "bytes; stories:", total,
           "; regions:", reg_counts, "; fields:", field_counts)
