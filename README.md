@@ -1,8 +1,8 @@
 # The World in One Picture — Saturday 21 November 2026
 
 A make.fun `news-image-20261121` entry: one 1024×1024 image summing up
-Saturday 21 November 2026's world news — 3 heroes, 12 cards, 25 briefs,
-40 stories across 6 regions, every story dated to the day, with a date
+Saturday 21 November 2026's world news — 3 heroes, 12 cards, 18 briefs,
+33 stories across 6 regions, every story dated to the day, with a date
 check naming what was excluded and a "not yet known" line.
 
 ## Build
