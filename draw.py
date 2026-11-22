@@ -182,8 +182,8 @@ PINS = [
     (1, 47, 39, 38, -4), (2, 31, 37, 16, 20), (3, -76, -11, 0, 0),
     (4, 21, 52, 30, -6), (5, 13, 56, -26, -18), (6, 28, 60, 16, -12),
     (7, 34, 31, -24, 30), (8, 48, 31, 44, 18), (9, 56, 26, 30, 36),
-    (10, 6, 46, -32, -4), (11, -77, 39, 0, 0), (12, -108, 26, 0, 0),
-    (13, -118, 34, 0, 0), (15, 8, 45, -14, 18),
+    (10, 6, 46, -32, -4), (11, -77, 39, 0, 0), (12, -108, 26, 4, 3),
+    (13, -118, 34, -6, -6), (15, 8, 45, -14, 18),
 ]
 
 TIMELINE = [("00:09", "Peru quake"), ("05:12", "M5.0 again"),
@@ -244,6 +244,7 @@ OVERFLOWS = []
 BANNER_CHECK = []
 H_CHECKS = []
 TEXT_BOXES = []
+LINES = []
 
 
 class RecDraw:
@@ -289,6 +290,32 @@ def audit_text_boxes():
                     near.append((sa[:38], sb[:38], "h", gap))
     print(f"TEXT-AUDIT: {n} text boxes, {n * (n - 1) // 2} pairs checked, "
           f"{len(hits)} intersections, {len(near)} near-misses (<3px)")
+    pens, mind, minpair = [], 999, None
+    for (bx0, by0, bx1, by1), txt in TEXT_BOXES:
+        for (lx0, ly0, lx1, ly1), lab in LINES:
+            if ly0 == ly1:  # horizontal line
+                if min(bx1, lx1) - max(bx0, lx0) <= 2:
+                    continue
+                if by0 < ly0 < by1:
+                    pens.append((txt[:30], lab))
+                else:
+                    dist = by0 - ly0 if by0 >= ly0 else ly0 - by1
+                    if 0 <= dist < mind:
+                        mind, minpair = dist, (txt[:30], lab)
+            else:  # vertical line
+                if min(by1, ly1) - max(by0, ly0) <= 2:
+                    continue
+                if bx0 < lx0 < bx1:
+                    pens.append((txt[:30], lab))
+                else:
+                    dist = bx0 - lx0 if bx0 >= lx0 else lx0 - bx1
+                    if 0 <= dist < mind:
+                        mind, minpair = dist, (txt[:30], lab)
+    print(f"LINE-AUDIT: {len(LINES)} lines x {n} texts, "
+          f"{len(pens)} penetrations, min text-to-line distance "
+          f"{mind}px at {minpair}")
+    for p in pens:
+        print("  PENETRATION:", p)
     for h in hits:
         print("  INTERSECT:", h)
     for h in near:
@@ -729,6 +756,12 @@ def main():
         place, region, field, head, deck, src, sure, big, biglab = hero
         d.rectangle([x, hy, x + hw, hy + hh], fill=(255, 253, 246),
                     outline=INK, width=2)
+        for seg, lab in (
+                ((x, hy, x + hw, hy), f"hero{i+1} top"),
+                ((x, hy + hh, x + hw, hy + hh), f"hero{i+1} bottom"),
+                ((x, hy, x, hy + hh), f"hero{i+1} left"),
+                ((x + hw, hy, x + hw, hy + hh), f"hero{i+1} right")):
+            LINES.append((seg, lab))
         HERO_SCENES[i](d, x + 3, hy + 3, hw - 6, 78)
         yy = hy + 84
         badge(d, x + 8, yy, i + 1, region)
@@ -744,30 +777,42 @@ def main():
         text_block(d, x + 8, yy + 6, deck, SANS(13), (52, 48, 42), hw - 16, 15,
                    max_lines=2, tag=f"herodeck{i}")
     # ---------------------------------------------------------- cards
+    # v3.8 layout: 4 cols x 3 rows; per card a full-width banner scene
+    # on top, then headline, info line, and the source/status meta row
+    # at the bottom. Card borders + banner edges are registered as
+    # lines for the text-vs-line audit.
     cy = hy + hh + 4
-    chh, chw = 72, hw
+    chw2, chh2 = (W - 32 - 18) // 4, 114
     for i, card in enumerate(CARDS):
         place, region, field, head, deck, src, sure = card
-        x = 16 + (i % 3) * (chw + 8)
-        yy0 = cy + (i // 3) * (chh + 3)
-        d.rectangle([x, yy0, x + chw, yy0 + chh], fill=(255, 253, 246),
+        x = 16 + (i % 4) * (chw2 + 6)
+        yy0 = cy + (i // 4) * (chh2 + 3)
+        d.rectangle([x, yy0, x + chw2, yy0 + chh2], fill=(255, 253, 246),
                     outline=(150, 142, 126), width=1)
-        CARD_SCENES[i](d, x + 1, yy0 + 1, 110, chh - 2)
-        tx = x + 117
-        badge(d, tx, yy0 + 5, i + 4, region)
-        flag(d, CARD_FLAGS[i], x + chw - 34, yy0 + 5, w=28, h=18)
-        d.text((tx + 30, yy0 + 5), place, font=SANS_B(11),
-               fill=REGIONS[region][1])
-        check_h(f"card{i+4} place", place, SANS_B(11), tx + 30, x + chw - 40)
-        cmeta = f"{src} - {SURE_LABEL[sure]}"
-        d.text((tx + 30, yy0 + 18), cmeta, font=SANS(9), fill=MUTE)
-        check_h(f"card{i+4} meta", cmeta, SANS(9), tx + 30, x + chw - 6)
-        text_block(d, tx, yy0 + 21, head, SERIF(19), INK, chw - 123, 19,
+        for seg, lab in (
+                ((x, yy0, x + chw2, yy0), f"card{i+4} top"),
+                ((x, yy0 + chh2, x + chw2, yy0 + chh2), f"card{i+4} bottom"),
+                ((x, yy0, x, yy0 + chh2), f"card{i+4} left"),
+                ((x + chw2, yy0, x + chw2, yy0 + chh2), f"card{i+4} right"),
+                ((x + 1, yy0 + 33, x + chw2 - 1, yy0 + 33),
+                 f"card{i+4} banner edge")):
+            LINES.append((seg, lab))
+        BANNER_SCENES[i](d, x + 1, yy0 + 1, chw2 - 2, 32)
+        text_block(d, x + 6, yy0 + 35, head, SERIF(19), INK, chw2 - 12, 19,
                    max_lines=2, tag=f"card{i}")
-        d.text((tx, yy0 + 65), CARD_INFO[i], font=SANS(13),
+        d.text((x + 6, yy0 + 82), CARD_INFO[i], font=SANS(13),
                fill=(52, 48, 42))
-        check_h(f"card{i+4} info", CARD_INFO[i], SANS(13), tx, x + chw - 6)
-    by = cy + 4 * (chh + 3) - 3 + 3
+        check_h(f"card{i+4} info", CARD_INFO[i], SANS(13), x + 6, x + chw2 - 6)
+        d.rectangle([x + 6, yy0 + 99, x + 22, yy0 + 113],
+                    fill=REGIONS[region][1])
+        t = str(i + 4)
+        d.text((x + 14 - d.textlength(t, font=SANS_B(11)) / 2, yy0 + 100),
+               t, font=SANS_B(11), fill=(255, 255, 255))
+        cmeta = f"{src} - {SURE_LABEL[sure]}"
+        d.text((x + 28, yy0 + 102), cmeta, font=SANS(9), fill=MUTE)
+        check_h(f"card{i+4} meta", cmeta, SANS(9), x + 28, x + chw2 - 34)
+        flag(d, CARD_FLAGS[i], x + chw2 - 30, yy0 + 100, w=24, h=13)
+    by = cy + 3 * (chh2 + 3) - 3 + 3
 
     # ------------------------------------------- briefs (left) + map (right)
     sec_y = by
@@ -779,7 +824,7 @@ def main():
         col = i % 2
         row = i // 2
         x = 16 + col * (colw + 10)
-        yy = sec_y + 30 + row * 32
+        yy = sec_y + 28 + row * 31
         d.rectangle([x, yy + 3, x + 9, yy + 12], fill=REGIONS[region][1])
         d.text((x + 14, yy), place, font=SANS_B(16), fill=REGIONS[region][1])
         px = x + 14 + d.textlength(place, font=SANS_B(16)) + 6
@@ -827,10 +872,11 @@ def main():
            "PINS NUDGED APART", font=SANS_B(11), fill=MUTE)
     check_h("map caption", "14 MERCURY — OFF THE MAP, IN SPACE · EUROPE "
             "PINS NUDGED APART", SANS_B(11), mx0 + 8, mx1 - 8)
-    by = sec_y + 222
+    by = sec_y + 218
 
     # ------------------------------------------------- numbers + bars
     d.line([16, by, W - 16, by], fill=INK, width=2)
+    LINES.append(((16, by, W - 16, by), "numbers rule"))
     d.text((16, by + 7), "THE DAY IN NUMBERS", font=SANS_B(12), fill=RED)
     nx = 172
     for num, lab in NUMBERS:
@@ -839,7 +885,7 @@ def main():
         d.text((lx, by + 8), lab, font=SANS(9), fill=MUTE)
         check_h(f"numbers label '{lab}'", lab, SANS(9), lx, nx + 139)
         nx += 141
-    by += 28
+    by += 26
     d.text((16, by + 1), "REGIONS", font=SANS_B(10), fill=MUTE)
     tally_bar(d, by, reg_counts, total, x0=76, x1=560, hgt=11)
     d.text((576, by + 1), "FIELDS", font=SANS_B(10), fill=MUTE)
@@ -854,11 +900,11 @@ def main():
     dc = ("DATE CHECK — NOT 21 NOV, LEFT OUT: Thu 19 — Shenzhen summit, ICJ Myanmar "
           "ruling, Anthropic debut · Fri 20 — Kyiv blitz, Nasdaq -5.3% close, Bayer "
           "$7.25bn approval, Rikers plan · Sun 22 agenda is not Saturday's news.")
-    yy = text_block(d, 16, by, dc, SANS_SB(11), (70, 64, 54), W - 32, 11,
+    yy = text_block(d, 16, by, dc, SANS_SB(11), (70, 64, 54), W - 32, 10,
                     max_lines=2, tag="datecheck")
     ny = ("NOT YET KNOWN SATURDAY NIGHT: BepiColombo's burn result · a final COP31 "
           "text · Peru's full damage toll. Sources are named per story.")
-    text_block(d, 16, yy + 2, ny, SANS_SB(11), RED, W - 32, 12,
+    text_block(d, 16, yy + 1, ny, SANS_SB(11), RED, W - 32, 12,
                max_lines=1, tag="notyet")
 
     print(f"H-CHECKS: {len(H_CHECKS)} measured, "
@@ -1123,6 +1169,200 @@ def sc_turin(d, x, y, w, h):
     d.rectangle([x + 42, y + 44, x + 68, y + 50], fill=(250, 205, 90),
                 outline=INK)
     card_label(d, x, y, w, h, "TURIN")
+
+
+# ------------------------------------------------------- banner scenes (v3.8)
+# Cards now carry the scene as a full-width banner (241x34). Wide
+# silhouette compositions: one dominant subject, bold shapes, the
+# place label chip sits bottom-left inside the banner.
+def bsc_warsaw(d, x, y, w, h):
+    _sky(d, x, y, w, h, (18, 26, 54), (70, 62, 92))
+    for bx, bw, bh in ((20, 26, 12), (60, 20, 17), (150, 24, 14),
+                       (196, 30, 18)):
+        d.rectangle([x + bx, y + h - bh, x + bx + bw, y + h],
+                    fill=(22, 26, 46))
+    d.arc([x + 70, y - 6, x + 190, y + 44], start=180, end=360,
+          fill=(120, 220, 255), width=3)
+    d.line([x + 218, y + 2, x + 148, y + 14], fill=(255, 120, 90), width=3)
+    cx, cy = x + 146, y + 15
+    for dx, dy in ((-9, -5), (0, -9), (9, -5), (-10, 2), (10, 2)):
+        d.line([cx, cy, cx + dx, cy + dy], fill=(255, 214, 90), width=2)
+    card_label(d, x, y, w, h, "WARSAW")
+
+
+def bsc_copenhagen(d, x, y, w, h):
+    _sky(d, x, y, w, h, (168, 198, 224), (226, 232, 238))
+    d.rectangle([x + 14, y + 14, x + 44, y + h], fill=(150, 96, 74))
+    d.rectangle([x + 24, y + 4, x + 34, y + 14], fill=(120, 74, 56))
+    d.ellipse([x + 108, y + 2, x + 124, y + 18], fill=(222, 184, 150))
+    d.rectangle([x + 102, y + 18, x + 130, y + h], fill=(40, 40, 50))
+    d.rectangle([x + 128, y + 24, x + 148, y + h - 4], fill=(120, 74, 56))
+    d.polygon([(x + 196, y + 6), (x + 214, y + 11), (x + 196, y + 16)],
+              fill=(90, 90, 100))
+    d.rectangle([x, y + h - 3, x + w, y + h], fill=(120, 130, 145))
+    card_label(d, x, y, w, h, "COPENHAGEN")
+
+
+def bsc_finland(d, x, y, w, h):
+    _sky(d, x, y, w, h, (120, 150, 180), (190, 205, 215))
+    d.rectangle([x, y + h - 9, x + w, y + h], fill=(46, 84, 120))
+    d.polygon([(x + 40, y + h - 9), (x + 48, y + h - 19), (x + 200, y + h - 19),
+               (x + 208, y + h - 9)], fill=(52, 56, 66))
+    d.rectangle([x + 56, y + h - 27, x + 72, y + h - 19], fill=RED)
+    d.rectangle([x + 74, y + h - 27, x + 90, y + h - 19], fill=(52, 84, 140))
+    d.rectangle([x + 176, y + h - 30, x + 192, y + h - 19],
+                fill=(230, 230, 230))
+    _flame(d, x + 118, y + 8, 10)
+    _flame(d, x + 132, y + 11, 7)
+    d.ellipse([x + 106, y - 1, x + 146, y + 6], fill=(110, 110, 120))
+    card_label(d, x, y, w, h, "THE GULF")
+
+
+def bsc_gaza(d, x, y, w, h):
+    _sky(d, x, y, w, h, (214, 190, 150), (232, 214, 180))
+    d.rectangle([x + 52, y + 8, x + 150, y + h - 8], fill=(245, 243, 236))
+    d.rectangle([x + 150, y + 16, x + 178, y + h - 8], fill=(225, 222, 214))
+    d.polygon([(x + 154, y + 16), (x + 178, y + 16), (x + 172, y + 23),
+               (x + 154, y + 23)], fill=(150, 180, 200))
+    d.rectangle([x + 92, y + 13, x + 108, y + h - 13], fill=RED)
+    d.rectangle([x + 97, y + 10, x + 103, y + h - 10], fill=RED)
+    d.ellipse([x + 66, y + h - 12, x + 78, y + h], fill=INK)
+    d.ellipse([x + 128, y + h - 12, x + 140, y + h], fill=INK)
+    cx, cy = x + 216, y + 7
+    for dx, dy in ((-7, -3), (0, -7), (7, -3), (7, 3)):
+        d.line([cx, cy, cx + dx, cy + dy], fill=(200, 90, 60), width=2)
+    d.rectangle([x, y + h - 3, x + w, y + h], fill=(190, 172, 140))
+    card_label(d, x, y, w, h, "GAZA")
+
+
+def bsc_basra(d, x, y, w, h):
+    _sky(d, x, y, w, h, (226, 200, 160), (240, 224, 190))
+    d.polygon([(x + 84, y + h), (x + 92, y + 8), (x + 120, y + 8),
+               (x + 128, y + h)], fill=(150, 148, 142))
+    d.ellipse([x + 92, y + 4, x + 120, y + 12], fill=(110, 108, 102))
+    _flame(d, x + 100, y + 2, 7)
+    _flame(d, x + 112, y + 3, 6)
+    d.polygon([(x + 168, y + 2), (x + 177, y + 2), (x + 170, y + 13),
+               (x + 179, y + 13), (x + 164, y + 29), (x + 168, y + 17),
+               (x + 161, y + 17)], fill=(250, 205, 90), outline=INK)
+    d.rectangle([x + 150, y + h - 9, x + 196, y + h], fill=(120, 116, 110))
+    card_label(d, x, y, w, h, "BASRA")
+
+
+def bsc_khasab(d, x, y, w, h):
+    _sky(d, x, y, w, h, (170, 200, 220), (222, 230, 234))
+    d.rectangle([x, y + h - 10, x + w, y + h], fill=(52, 92, 128))
+    d.polygon([(x + 36, y + h - 10), (x + 44, y + h - 20), (x + 196, y + h - 20),
+               (x + 206, y + h - 10)], fill=(40, 44, 52))
+    d.rectangle([x + 48, y + h - 28, x + 60, y + h - 20],
+                fill=(230, 230, 230))
+    d.rectangle([x + 64, y + h - 25, x + 110, y + h - 20],
+                fill=(90, 96, 104))
+    cx, cy = x + 200, y + h - 18
+    for dx, dy in ((-10, -6), (0, -11), (10, -6), (11, 2), (0, 8)):
+        d.line([cx, cy, cx + dx, cy + dy], fill=(255, 170, 60), width=2)
+    _flame(d, x + 192, y + h - 26, 6)
+    d.polygon([(x + 4, y + h - 10), (x + 16, y + h - 24), (x + 28, y + h - 10)],
+              fill=(140, 118, 92))
+    card_label(d, x, y, w, h, "KHASAB")
+
+
+def bsc_geneva(d, x, y, w, h):
+    _sky(d, x, y, w, h, (206, 214, 206), (228, 232, 222))
+    d.rectangle([x + 92, y + 5, x + 128, y + h - 3], fill=(90, 96, 110))
+    d.line([x + 110, y + 5, x + 110, y + 1], fill=INK, width=2)
+    d.ellipse([x + 108, y - 1, x + 112, y + 3], fill=RED)
+    d.ellipse([x + 99, y + 15, x + 107, y + 23], fill=(255, 214, 90))
+    d.ellipse([x + 113, y + 15, x + 121, y + 23], fill=(255, 214, 90))
+    d.rectangle([x + 100, y + 26, x + 120, y + 29], fill=(60, 64, 74))
+    d.line([x + 150, y + h - 6, x + 168, y + 12], fill=(120, 74, 40),
+           width=4)
+    d.rectangle([x + 160, y + 3, x + 178, y + 11], fill=(150, 100, 60))
+    d.rectangle([x + 146, y + h - 4, x + 182, y + h - 1], fill=(96, 70, 44))
+    card_label(d, x, y, w, h, "GENEVA")
+
+
+def bsc_washington(d, x, y, w, h):
+    _sky(d, x, y, w, h, (150, 175, 205), (215, 225, 235))
+    d.rectangle([x + 84, y + 3, x + 156, y + h - 3], fill=(52, 56, 66))
+    for ly in (8, 17, 26):
+        d.rectangle([x + 90, y + ly, x + 150, y + ly + 6], fill=(70, 76, 90))
+        d.ellipse([x + 93, y + ly + 1, x + 97, y + ly + 5],
+                  fill=(120, 255, 140))
+        d.ellipse([x + 140, y + ly + 1, x + 144, y + ly + 5],
+                  fill=(255, 120, 90))
+    d.polygon([(x + 178, y + 2), (x + 187, y + 2), (x + 181, y + 13),
+               (x + 189, y + 13), (x + 175, y + 28), (x + 179, y + 17),
+               (x + 172, y + 17)], fill=(250, 205, 90), outline=INK)
+    d.arc([x + 30, y + 12, x + 52, y + 30], 180, 360, fill=(200, 198, 190),
+          width=3)
+    d.rectangle([x + 28, y + 26, x + 54, y + 31], fill=(235, 233, 226))
+    card_label(d, x, y, w, h, "WASHINGTON")
+
+
+def bsc_guasave(d, x, y, w, h):
+    _sky(d, x, y, w, h, (232, 190, 120), (240, 214, 160))
+    d.ellipse([x + 204, y + 3, x + 218, y + 17], fill=(250, 205, 90))
+    d.ellipse([x + 98, y + 8, x + 122, y + 30], fill=(222, 184, 150))
+    d.polygon([(x + 90, y + 11), (x + 130, y + 11), (x + 120, y + 3),
+               (x + 100, y + 3)], fill=(60, 44, 30))
+    d.rectangle([x + 92, y + 30, x + 128, y + h], fill=(120, 60, 50))
+    _star(d, x + 168, y + 18, 9, (250, 205, 90))
+    d.rectangle([x + 34, y + 16, x + 37, y + h - 2], fill=(70, 130, 70))
+    d.rectangle([x + 29, y + 22, x + 34, y + 27], fill=(70, 130, 70))
+    card_label(d, x, y, w, h, "GUASAVE")
+
+
+def bsc_losangeles(d, x, y, w, h):
+    _sky(d, x, y, w, h, (206, 170, 140), (226, 200, 170))
+    d.rectangle([x + 84, y + 14, x + 140, y + h - 2], outline=(52, 44, 38),
+                width=3)
+    d.polygon([(x + 80, y + 14), (x + 112, y + 3), (x + 144, y + 14)],
+              outline=(52, 44, 38), width=3)
+    _flame(d, x + 112, y + 20, 10)
+    d.line([x + 168, y + h - 2, x + 168, y + 12], fill=(40, 34, 30), width=3)
+    d.line([x + 168, y + 17, x + 161, y + 10], fill=(40, 34, 30), width=2)
+    d.rectangle([x, y + h - 3, x + w, y + h], fill=(120, 96, 78))
+    card_label(d, x, y, w, h, "LOS ANGELES")
+
+
+def bsc_mercury(d, x, y, w, h):
+    _sky(d, x, y, w, h, (8, 10, 24), (24, 28, 48))
+    for sx, sy in ((30, 5), (70, 10), (150, 4), (210, 8)):
+        d.ellipse([x + sx, y + sy, x + sx + 2, y + sy + 2],
+                  fill=(255, 255, 230))
+    d.ellipse([x + 168, y - 8, x + 224, y + 48], fill=(168, 164, 158))
+    for cx, cy, r in ((182, 10, 4), (200, 26, 5), (188, 34, 3)):
+        d.ellipse([x + cx - r, y + cy - r, x + cx + r, y + cy + r],
+                  outline=(130, 126, 120), width=2)
+    d.rectangle([x + 92, y + 11, x + 106, y + 23], fill=(200, 204, 210))
+    d.polygon([(x + 78, y + 8), (x + 92, y + 13), (x + 92, y + 21),
+               (x + 78, y + 26)], fill=(70, 110, 190))
+    d.polygon([(x + 106, y + 13), (x + 120, y + 8), (x + 120, y + 26),
+               (x + 106, y + 21)], fill=(70, 110, 190))
+    _flame(d, x + 99, y + 27, 5, col=(255, 160, 60))
+    card_label(d, x, y, w, h, "MERCURY")
+
+
+def bsc_turin(d, x, y, w, h):
+    _sky(d, x, y, w, h, (120, 170, 110), (90, 150, 84))
+    d.rectangle([x + 4, y + 6, x + w - 4, y + h - 4], fill=(196, 120, 70))
+    d.line([x + 4, y + h // 2 + 3, x + w - 4, y + h // 2 + 3],
+           fill=(240, 240, 240), width=2)
+    d.ellipse([x + 40, y + h - 14, x + 52, y + h - 2], fill=(210, 230, 80),
+              outline=(240, 240, 240), width=1)
+    d.polygon([(x + 98, y + 3), (x + 126, y + 3), (x + 121, y + 22),
+               (x + 103, y + 22)], fill=(250, 205, 90), outline=INK)
+    d.rectangle([x + 109, y + 22, x + 115, y + 28], fill=(250, 205, 90),
+                outline=INK)
+    d.rectangle([x + 102, y + 28, x + 122, y + 32], fill=(250, 205, 90),
+                outline=INK)
+    card_label(d, x, y, w, h, "TURIN")
+
+
+BANNER_SCENES = [bsc_warsaw, bsc_copenhagen, bsc_finland, bsc_gaza,
+                 bsc_basra, bsc_khasab, bsc_geneva, bsc_washington,
+                 bsc_guasave, bsc_losangeles, bsc_mercury, bsc_turin]
 
 
 CARD_SCENES = [sc_warsaw, sc_copenhagen, sc_finland, sc_gaza, sc_basra,
